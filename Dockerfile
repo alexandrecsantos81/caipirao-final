@@ -1,28 +1,18 @@
-# Estágio 1: Build da Aplicação
-FROM node:18-slim AS base
-
-WORKDIR /app
-
-# Copia os arquivos de dependência do backend para a raiz do app
-COPY backend/package.json ./
-COPY backend/package-lock.json* ./
-
-# Instala as dependências
-RUN npm install
-
-# Copia o resto do código do backend
-COPY backend/ ./
-
-# Estágio 2: Produção
+# Usa a imagem oficial do Node.js como base
 FROM node:18-slim
 
+# Define o diretório de trabalho dentro do container
 WORKDIR /app
 
-# Copia a aplicação com as dependências já instaladas do estágio anterior
-COPY --from=base /app/ ./
+# Copia a pasta inteira do backend para dentro do diretório de trabalho /app
+COPY backend/ .
 
-# Expõe a porta que a sua aplicação usa
+# Executa a instalação das dependências
+# O npm vai encontrar o package.json na raiz do diretório de trabalho
+RUN npm install
+
+# Expõe a porta que a aplicação usa
 EXPOSE 3000
 
-# O comando para iniciar a sua aplicação
+# Comando para iniciar a aplicação
 CMD ["npm", "start"]
