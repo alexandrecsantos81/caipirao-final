@@ -1,5 +1,9 @@
 # Ignorar ficheiros de credenciais e segredos
 chave OAuth.txt
+# Ignora todos os arquivos .json...
 *.json
+
+# ...EXCETO o vercel.json
+!vercel.json
 *.txt
 .env
