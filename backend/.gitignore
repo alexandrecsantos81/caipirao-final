@@ -1,0 +1,11 @@
+# Ignorar a pasta de dependências do Node.js
+node_modules
+
+# Ignorar o ficheiro de variáveis de ambiente (MUITO IMPORTANTE!)
+chave OAuth.txt
+*.json
+*.txt
+.env
+
+# Ignorar ficheiros de log ou de debug
+npm-debug.log
