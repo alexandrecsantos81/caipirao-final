@@ -4,12 +4,14 @@ FROM node:18-slim
 # Define o diretório de trabalho dentro do container
 WORKDIR /app
 
-# Copia a pasta inteira do backend para dentro do diretório de trabalho /app
-COPY backend/ .
+# Copia PRIMEIRO os arquivos de dependência para otimizar o cache
+COPY backend/package.json backend/package-lock.json* ./
 
-# Executa a instalação das dependências
-# O npm vai encontrar o package.json na raiz do diretório de trabalho
+# Instala as dependências
 RUN npm install
+
+# AGORA copia o resto do código do backend
+COPY backend/ .
 
 # Expõe a porta que a aplicação usa
 EXPOSE 3000
