@@ -1,31 +1,27 @@
 # Estágio 1: Build da Aplicação
-# Usamos uma imagem oficial do Node.js
 FROM node:18-slim AS base
 
-# Define o diretório de trabalho dentro do container
 WORKDIR /app
 
-# Copia AMBOS os arquivos package.json e package-lock.json para a raiz do app
-# Isso otimiza o cache do Docker
-COPY package.json ./
-COPY package-lock.json* ./
+# Copia os arquivos de dependência do backend para a raiz do app
+COPY backend/package.json ./
+COPY backend/package-lock.json* ./
+
+# Instala as dependências
+RUN npm install
 
 # Copia o resto do código do backend
-COPY backend/ ./backend/
-
-# Instala as dependências DENTRO da pasta backend
-RUN npm install --prefix backend
+COPY backend/ ./
 
 # Estágio 2: Produção
-# Usamos uma imagem menor para a versão final
 FROM node:18-slim
 
 WORKDIR /app
 
-# Copia as dependências instaladas e o código do estágio de build
-COPY --from=base /app/backend ./
+# Copia a aplicação com as dependências já instaladas do estágio anterior
+COPY --from=base /app/ ./
 
-# Expõe a porta que a sua aplicação usa (geralmente 3000, mas o Render ajusta isso)
+# Expõe a porta que a sua aplicação usa
 EXPOSE 3000
 
 # O comando para iniciar a sua aplicação
