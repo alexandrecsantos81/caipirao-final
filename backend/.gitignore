@@ -7,5 +7,9 @@ chave OAuth.txt
 *.txt
 .env
 
+
+!package.json
+!package-lock.json
+
 # Ignorar ficheiros de log ou de debug
 npm-debug.log
