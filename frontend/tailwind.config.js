@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: ["class"], // <-- PASSO CRÍTICO: Habilita o modo escuro baseado em classe.
+  darkMode: ["class"], // Habilita a estratégia de classe para o tema escuro.
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',

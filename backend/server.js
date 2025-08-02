@@ -21,8 +21,7 @@ const PORT = process.env.PORT || 3000;
 
 // Configuração de CORS (Cross-Origin Resource Sharing)
 const allowedOrigins = [
-  'https://caipirao.netlify.app',      // URL de produção principal
-  'https://caipiraosys.netlify.app',   // URL antiga ou secundária
+  'https://caipirao.netlify.app',      // URL de produção principal  // URL antiga ou secundária
   'http://localhost:5173'              // Ambiente de desenvolvimento local
 ];
 

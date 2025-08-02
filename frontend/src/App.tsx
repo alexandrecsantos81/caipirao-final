@@ -1,49 +1,49 @@
 // frontend/src/App.tsx
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { Toaster } from 'sonner';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-// --- CORREÇÃO FINALÍSSIMA ---
-// Assumindo que todos os componentes não-páginas estão em uma pasta 'components'
-// ou diretamente na raiz de 'src'. Esta é a estrutura mais provável.
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Importe seus providers e componentes
+import { AuthProvider } from './contexts/AuthContext'; 
+import { ThemeProvider } from './contexts/ThemeProvider'; // 1. Importar o ThemeProvider
+import { LayoutPrincipal } from './components/LayoutPrincipal'; 
 import Login from './pages/Login';
-import DashboardLayout from './components/DashboardLayout'; // Caminho mais provável
-import AuthGuard from './components/AuthGuard';             // Caminho mais provável
 import Dashboard from './pages/Dashboard';
 import Clientes from './pages/Clientes';
-import Produtos from './pages/Produtos';
 import Movimentacoes from './pages/Movimentacoes';
+import Produtos from './pages/Produtos';
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <AuthProvider>
-      <Toaster richColors position="top-right" />
-      <Router>
-        <Routes>
-          {/* Se o usuário acessar a raiz, redirecione para /login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-
-          {/* Rota pública para a página de login */}
-          <Route path="/login" element={<Login />} />
-
-          {/* Rotas protegidas dentro do layout do dashboard */}
-          <Route
-            path="/dashboard"
-            element={
-              <AuthGuard>
-                <DashboardLayout />
-              </AuthGuard>
-            }
-          >
-            <Route index element={<Dashboard />} />
-            <Route path="clientes" element={<Clientes />} />
-            <Route path="produtos" element={<Produtos />} />
-            <Route path="movimentacoes" element={<Movimentacoes />} />
-          </Route>
-        </Routes>
-      </Router>
-    </AuthProvider>
+    <>
+      {/* 2. Envolver toda a aplicação com o ThemeProvider */}
+      {/*    - defaultTheme: o tema padrão se nenhum for encontrado no localStorage. */}
+      {/*    - storageKey: o nome da chave usada para salvar no localStorage. */}
+      <ThemeProvider defaultTheme="system" storageKey="caipirao-ui-theme">
+        <Router>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route element={<LayoutPrincipal />}>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/clientes" element={<Clientes />} />
+                  <Route path="/movimentacoes" element={<Movimentacoes />} />
+                  <Route path="/produtos" element={<Produtos />} />
+                </Route>
+              </Routes>
+            </AuthProvider>
+          </QueryClientProvider>
+        </Router>
+        
+        <ToastContainer position="top-right" autoClose={3000} theme="light" />
+      </ThemeProvider>
+    </>
   );
 }
 

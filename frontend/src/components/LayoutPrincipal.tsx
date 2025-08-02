@@ -1,16 +1,19 @@
-// /frontend/src/components/LayoutPrincipal.tsx
+// frontend/src/components/LayoutPrincipal.tsx
 
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Home, Users, Package, DollarSign, LogOut, UserCircle, ShieldCheck } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeProvider'; // 1. Importar o hook useTheme
+import { Home, Users, Package, DollarSign, LogOut, UserCircle, ShieldCheck, Moon, Sun } from 'lucide-react'; // 2. Importar os ícones Moon e Sun
 import { Button } from './ui/button';
-import { Badge } from './ui/badge'; // Importar o Badge
+import { Badge } from './ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu'; // 3. Importar os componentes do DropdownMenu
 
 export function LayoutPrincipal() {
-  // 1. Obter o 'user' além das outras propriedades
   const { isAuthenticated, logout, user } = useAuth();
+  const { setTheme } = useTheme(); // 4. Obter a função setTheme do nosso contexto
 
   if (!isAuthenticated) {
+    // Este redirecionamento será melhorado na Etapa 2 com o AuthGuard
     return <NavLink to="/login" replace />;
   }
 
@@ -46,7 +49,6 @@ export function LayoutPrincipal() {
             </nav>
           </div>
 
-          {/* 2. Área do Usuário e Logout Atualizada */}
           <div className="mt-auto p-4 border-t">
             {user && (
               <div className="flex items-center gap-3 mb-4">
@@ -73,7 +75,30 @@ export function LayoutPrincipal() {
 
       <div className="flex flex-col h-screen">
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+          {/* Espaço para futuros elementos à esquerda */}
           <div className="w-full flex-1"></div>
+
+          {/* 5. Adicionar o DropdownMenu para alternância de tema */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                <span className="sr-only">Alternar tema</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setTheme('light')}>
+                Claro
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme('dark')}>
+                Escuro
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme('system')}>
+                Sistema
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           <Outlet />
