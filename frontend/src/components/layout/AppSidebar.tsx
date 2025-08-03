@@ -1,18 +1,21 @@
 // frontend/src/components/layout/AppSidebar.tsx
 
 import { NavLink } from 'react-router-dom';
-import { Home, ShoppingCart, Users, Package, LogOut, UserCircle, ShieldCheck } from 'lucide-react';
+// 1. Importar o ícone 'LineChart' da biblioteca lucide-react
+import { Home, ShoppingCart, Users, Package, LineChart, LogOut, UserCircle, ShieldCheck } from 'lucide-react'; 
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { Drawer, DrawerContent } from '../ui/drawer';
 
+// 2. Adicionar a nova rota de relatórios ao array de links de navegação
 const navLinks = [
   { to: "/", label: "Dashboard", icon: Home },
   { to: "/movimentacoes", label: "Movimentações", icon: ShoppingCart },
   { to: "/clientes", label: "Clientes", icon: Users },
   { to: "/produtos", label: "Produtos", icon: Package },
+  { to: "/relatorios", label: "Relatórios", icon: LineChart }, // <-- ESTA É A LINHA QUE ESTAVA FALTANDO
 ];
 
 interface AppSidebarProps {
@@ -101,7 +104,6 @@ export default function AppSidebar({ isCollapsed, isMobileNavOpen, setIsMobileNa
       <aside
         className={cn(
           "hidden md:flex flex-col border-r transition-all duration-300 ease-in-out",
-          // CORREÇÃO: As larguras são aplicadas diretamente aqui
           isCollapsed ? "w-20" : "w-[220px] lg:w-[280px]"
         )}
       >
