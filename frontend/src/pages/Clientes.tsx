@@ -1,5 +1,3 @@
-// frontend/src/pages/Clientes.tsx
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,6 +7,7 @@ import { toast } from 'sonner';
 
 import { useClientes, useCreateCliente, useUpdateCliente, useDeleteCliente } from '@/hooks/useClientes';
 import { Cliente, CreateClientePayload } from '@/services/clientes.service';
+import { formatWhatsAppLink } from '@/lib/utils'; // <-- IMPORTAÇÃO DA NOVA FUNÇÃO
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +17,8 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { PlusCircle, Terminal } from 'lucide-react';
+import { PlusCircle, Terminal, Phone } from 'lucide-react'; // Ícone de telefone adicionado para ilustração
 
-// CORREÇÃO 1: Schema simplificado
 const formSchema = z.object({
   id: z.number().optional(),
   nome: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres." }),
@@ -31,7 +29,7 @@ const formSchema = z.object({
     message: "O telefone deve ter 10 ou 11 dígitos.",
   }),
   nome_responsavel: z.string().optional(),
-  telefone_whatsapp: z.boolean(), // Removido o .default(false) daqui
+  telefone_whatsapp: z.boolean(),
   logradouro: z.string().optional(),
   quadra: z.string().optional(),
   lote: z.string().optional(),
@@ -67,12 +65,11 @@ export default function Clientes() {
 
   const form = useForm<ClienteFormValues>({
     resolver: zodResolver(formSchema),
-    // CORREÇÃO 2: Valores padrão explícitos para todos os campos do schema
     defaultValues: {
       nome: '',
       contato: '',
       nome_responsavel: '',
-      telefone_whatsapp: false, // O valor padrão é definido aqui
+      telefone_whatsapp: false,
       logradouro: '',
       quadra: '',
       lote: '',
@@ -85,12 +82,11 @@ export default function Clientes() {
   const { formState: { isSubmitting } } = form;
 
   const onSubmit = (data: ClienteFormValues) => {
-    // O payload agora corresponde diretamente ao tipo CreateClientePayload
     const payload: CreateClientePayload = {
         nome: data.nome,
         contato: data.contato.replace(/\D/g, ''),
         nome_responsavel: data.nome_responsavel || undefined,
-        telefone_whatsapp: data.telefone_whatsapp, // Já é um booleano
+        telefone_whatsapp: data.telefone_whatsapp,
         logradouro: data.logradouro || undefined,
         quadra: data.quadra || undefined,
         lote: data.lote || undefined,
@@ -140,7 +136,7 @@ export default function Clientes() {
 
   const handleAddNew = () => {
     setClienteParaEditar(null);
-    form.reset(); // Reseta para os defaultValues definidos no useForm
+    form.reset();
     setIsDrawerOpen(true);
   };
 
@@ -176,7 +172,25 @@ export default function Clientes() {
                     {clientes?.map((cliente) => (
                         <TableRow key={cliente.id}>
                             <TableCell className="font-medium">{cliente.nome}</TableCell>
-                            <TableCell>{formatPhone(cliente.contato)}{cliente.telefone_whatsapp && <span className="ml-2 text-xs text-green-600 font-semibold">(WhatsApp)</span>}</TableCell>
+                            <TableCell>
+                                {/* INÍCIO DA ALTERAÇÃO DA ROTINA 5 */}
+                                {cliente.telefone_whatsapp && cliente.contato ? (
+                                    <a 
+                                        href={formatWhatsAppLink(cliente.contato)} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 text-blue-600 hover:underline hover:text-blue-800 transition-colors"
+                                        title="Abrir conversa no WhatsApp"
+                                    >
+                                        <Phone className="h-4 w-4" />
+                                        {formatPhone(cliente.contato)}
+                                        <span className="ml-1 text-xs text-green-600 font-semibold">(WhatsApp)</span>
+                                    </a>
+                                ) : (
+                                    <span>{formatPhone(cliente.contato)}</span>
+                                )}
+                                {/* FIM DA ALTERAÇÃO DA ROTINA 5 */}
+                            </TableCell>
                             <TableCell>{`${cliente.logradouro || ''}, Qd. ${cliente.quadra || 'S/N'}, Lt. ${cliente.lote || 'S/N'} - ${cliente.bairro || 'Bairro não informado'}`}</TableCell>
                             <TableCell className="text-right space-x-2">
                                 <Button variant="outline" size="sm" onClick={() => handleEdit(cliente)}>Editar</Button>
