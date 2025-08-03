@@ -1,34 +1,38 @@
-// frontend/src/components/layout/AppSidebar.tsx
+// /frontend/src/components/layout/AppSidebar.tsx
 
 import { NavLink } from 'react-router-dom';
-// 1. Importar o ícone 'LineChart' da biblioteca lucide-react
-import { Home, ShoppingCart, Users, Package, LineChart, LogOut, UserCircle, ShieldCheck } from 'lucide-react'; 
+// 1. Importar o ícone 'Briefcase' da biblioteca lucide-react para representar "Vendedores"
+import { Home, ShoppingCart, Users, Package, LineChart, LogOut, UserCircle, ShieldCheck, Briefcase } from 'lucide-react'; 
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { Drawer, DrawerContent } from '../ui/drawer';
 
-// 2. Adicionar a nova rota de relatórios ao array de links de navegação
+// 2. Adicionar a nova rota de "Vendedores" ao array de links de navegação
 const navLinks = [
   { to: "/", label: "Dashboard", icon: Home },
   { to: "/movimentacoes", label: "Movimentações", icon: ShoppingCart },
   { to: "/clientes", label: "Clientes", icon: Users },
   { to: "/produtos", label: "Produtos", icon: Package },
-  { to: "/relatorios", label: "Relatórios", icon: LineChart }, // <-- ESTA É A LINHA QUE ESTAVA FALTANDO
+  { to: "/vendedores", label: "Vendedores", icon: Briefcase }, // <-- NOVA LINHA ADICIONADA
+  { to: "/relatorios", label: "Relatórios", icon: LineChart },
 ];
 
+// Interface para as propriedades do componente
 interface AppSidebarProps {
   isCollapsed: boolean;
   isMobileNavOpen: boolean;
   setIsMobileNavOpen: (isOpen: boolean) => void;
 }
 
+// Componente interno que renderiza o conteúdo da sidebar (reutilizado para desktop e mobile)
 const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, onLinkClick?: () => void }) => {
   const { logout, user } = useAuth();
 
   const handleLogout = () => {
     logout();
+    // Se for um clique no menu mobile, fecha o drawer
     if (onLinkClick) {
       onLinkClick();
     }
@@ -36,6 +40,7 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
 
   return (
     <div className="flex flex-col h-full bg-muted/40">
+      {/* Cabeçalho da Sidebar com o logo e nome */}
       <div className={cn("flex h-14 items-center border-b lg:h-[60px]", isCollapsed ? "px-2 justify-center" : "px-4 lg:px-6")}>
         <NavLink to="/" className="flex items-center gap-2 font-semibold" onClick={onLinkClick}>
           <Package className="h-6 w-6" />
@@ -43,6 +48,7 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
         </NavLink>
       </div>
 
+      {/* Navegação principal */}
       <nav className={cn("flex-1 overflow-y-auto py-2", isCollapsed ? "px-2" : "px-2 lg:px-4")}>
         <ul className="space-y-1">
           {navLinks.map((link) => (
@@ -55,7 +61,7 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
                   cn(
                     "flex items-center gap-3 rounded-lg py-2 text-muted-foreground transition-all hover:text-primary",
                     isCollapsed ? "px-3 justify-center" : "px-3",
-                    isActive && "bg-muted text-primary"
+                    isActive && "bg-muted text-primary" // Estilo para o link ativo
                   )
                 }
               >
@@ -67,6 +73,7 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
         </ul>
       </nav>
 
+      {/* Rodapé da Sidebar com informações do usuário e botão de sair */}
       <div className={cn("mt-auto p-4 border-t w-full", isCollapsed && "px-2")}>
         {user && (
           <div className={cn("flex items-center gap-3 mb-4", isCollapsed && "justify-center")}>
@@ -97,10 +104,11 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
   );
 };
 
+// Componente principal que exporta a Sidebar
 export default function AppSidebar({ isCollapsed, isMobileNavOpen, setIsMobileNavOpen }: AppSidebarProps) {
   return (
     <>
-      {/* Sidebar para Desktop */}
+      {/* Sidebar para Desktop (visível em telas médias e maiores) */}
       <aside
         className={cn(
           "hidden md:flex flex-col border-r transition-all duration-300 ease-in-out",
@@ -110,7 +118,7 @@ export default function AppSidebar({ isCollapsed, isMobileNavOpen, setIsMobileNa
         <SidebarContent isCollapsed={isCollapsed} />
       </aside>
 
-      {/* Drawer para Mobile */}
+      {/* Drawer para Mobile (visível em telas pequenas) */}
       <div className="md:hidden">
         <Drawer open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
           <DrawerContent className="border-r h-full w-[280px] mt-0 rounded-none">
