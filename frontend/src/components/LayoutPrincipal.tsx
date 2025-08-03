@@ -2,32 +2,28 @@
 
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { useTheme } from '../contexts/ThemeProvider';
-import { Button } from './ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { useTheme } from '@/contexts/ThemeProvider';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Moon, Sun, PanelLeftClose, PanelLeftOpen, Menu } from 'lucide-react';
-import AppSidebar from './layout/AppSidebar';
-import { cn } from '@/lib/utils';
+import AppSidebar from '@/components/layout/AppSidebar';
+// import { cn } from '@/lib/utils'; // <-- REMOVER ESTA LINHA
 
-export function LayoutPrincipal() {
+export default function LayoutPrincipal() {
   const { setTheme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   return (
-    // 1. O contêiner principal agora é um flexbox
     <div className="flex h-screen w-full bg-background">
-      {/* A sidebar é um filho direto do flexbox */}
       <AppSidebar 
         isCollapsed={isCollapsed} 
         isMobileNavOpen={isMobileNavOpen}
         setIsMobileNavOpen={setIsMobileNavOpen}
       />
 
-      {/* 2. Este contêiner agrupa o header e o main */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex h-14 shrink-0 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-          {/* Botão de controle do menu desktop */}
           <Button
             variant="outline"
             size="icon"
@@ -42,7 +38,6 @@ export function LayoutPrincipal() {
             <span className="sr-only">Recolher/Expandir Menu</span>
           </Button>
 
-          {/* Botão "hambúrguer" para abrir o menu móvel */}
           <Button
             variant="outline"
             size="icon"
@@ -53,7 +48,6 @@ export function LayoutPrincipal() {
             <span className="sr-only">Abrir Menu</span>
           </Button>
 
-          {/* Espaçador e menu de tema */}
           <div className="w-full flex-1"></div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -71,7 +65,6 @@ export function LayoutPrincipal() {
           </DropdownMenu>
         </header>
         
-        {/* 3. O <main> agora é o único elemento que pode rolar */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           <Outlet />
         </main>
