@@ -1,38 +1,38 @@
-// /frontend/src/components/layout/AppSidebar.tsx
+// frontend/src/components/layout/AppSidebar.tsx
 
 import { NavLink } from 'react-router-dom';
-// 1. Importar o ícone 'Briefcase' da biblioteca lucide-react para representar "Vendedores"
-import { Home, ShoppingCart, Users, Package, LineChart, LogOut, UserCircle, ShieldCheck, Briefcase } from 'lucide-react'; 
+// 1. Importe o ícone 'UsersCog' para representar a gestão de usuários
+import { Home, ShoppingCart, Users, Package, LineChart, LogOut, UserCircle, ShieldCheck, Briefcase, UserCog } from 'lucide-react'; 
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { Drawer, DrawerContent } from '../ui/drawer';
 
-// 2. Adicionar a nova rota de "Vendedores" ao array de links de navegação
 const navLinks = [
   { to: "/", label: "Dashboard", icon: Home },
   { to: "/movimentacoes", label: "Movimentações", icon: ShoppingCart },
   { to: "/clientes", label: "Clientes", icon: Users },
   { to: "/produtos", label: "Produtos", icon: Package },
-  { to: "/vendedores", label: "Vendedores", icon: Briefcase }, // <-- NOVA LINHA ADICIONADA
+  { to: "/vendedores", label: "Vendedores", icon: Briefcase },
   { to: "/relatorios", label: "Relatórios", icon: LineChart },
 ];
 
-// Interface para as propriedades do componente
+// NOVO: Link para a página de usuários, que será adicionado condicionalmente
+const adminLinks = [
+  { to: "/usuarios", label: "Usuários", icon: UserCog },
+];
 interface AppSidebarProps {
   isCollapsed: boolean;
   isMobileNavOpen: boolean;
   setIsMobileNavOpen: (isOpen: boolean) => void;
 }
 
-// Componente interno que renderiza o conteúdo da sidebar (reutilizado para desktop e mobile)
 const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, onLinkClick?: () => void }) => {
   const { logout, user } = useAuth();
 
   const handleLogout = () => {
     logout();
-    // Se for um clique no menu mobile, fecha o drawer
     if (onLinkClick) {
       onLinkClick();
     }
@@ -40,7 +40,6 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
 
   return (
     <div className="flex flex-col h-full bg-muted/40">
-      {/* Cabeçalho da Sidebar com o logo e nome */}
       <div className={cn("flex h-14 items-center border-b lg:h-[60px]", isCollapsed ? "px-2 justify-center" : "px-4 lg:px-6")}>
         <NavLink to="/" className="flex items-center gap-2 font-semibold" onClick={onLinkClick}>
           <Package className="h-6 w-6" />
@@ -48,9 +47,9 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
         </NavLink>
       </div>
 
-      {/* Navegação principal */}
       <nav className={cn("flex-1 overflow-y-auto py-2", isCollapsed ? "px-2" : "px-2 lg:px-4")}>
         <ul className="space-y-1">
+          {/* Renderiza os links de navegação padrão */}
           {navLinks.map((link) => (
             <li key={link.to}>
               <NavLink
@@ -61,7 +60,7 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
                   cn(
                     "flex items-center gap-3 rounded-lg py-2 text-muted-foreground transition-all hover:text-primary",
                     isCollapsed ? "px-3 justify-center" : "px-3",
-                    isActive && "bg-muted text-primary" // Estilo para o link ativo
+                    isActive && "bg-muted text-primary"
                   )
                 }
               >
@@ -70,10 +69,41 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
               </NavLink>
             </li>
           ))}
+
+          {/* 2. Renderiza os links de admin APENAS se o perfil for 'ADMIN' */}
+          {user?.perfil === 'ADMIN' && (
+            <>
+              {/* Adiciona um separador visual para a seção de administração */}
+              {!isCollapsed && (
+                <li className="px-3 py-2 text-xs font-semibold text-muted-foreground/80 tracking-wider uppercase">
+                  Admin
+                </li>
+              )}
+              {adminLinks.map((link) => (
+                <li key={link.to}>
+                  <NavLink
+                    to={link.to}
+                    end
+                    onClick={onLinkClick}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 rounded-lg py-2 text-muted-foreground transition-all hover:text-primary",
+                        isCollapsed ? "px-3 justify-center" : "px-3",
+                        isActive && "bg-muted text-primary"
+                      )
+                    }
+                  >
+                    <link.icon className="h-5 w-5" />
+                    {!isCollapsed && <span className="truncate">{link.label}</span>}
+                  </NavLink>
+                </li>
+              ))}
+            </>
+          )}
         </ul>
       </nav>
 
-      {/* Rodapé da Sidebar com informações do usuário e botão de sair */}
+      {/* O rodapé permanece o mesmo */}
       <div className={cn("mt-auto p-4 border-t w-full", isCollapsed && "px-2")}>
         {user && (
           <div className={cn("flex items-center gap-3 mb-4", isCollapsed && "justify-center")}>
@@ -104,8 +134,9 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
   );
 };
 
-// Componente principal que exporta a Sidebar
+// O componente principal exportado permanece o mesmo
 export default function AppSidebar({ isCollapsed, isMobileNavOpen, setIsMobileNavOpen }: AppSidebarProps) {
+  // ... (código existente sem alterações)
   return (
     <>
       {/* Sidebar para Desktop (visível em telas médias e maiores) */}

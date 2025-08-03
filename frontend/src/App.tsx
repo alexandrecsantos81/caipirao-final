@@ -10,7 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeProvider';
 import { AuthGuard } from './components/guards/AuthGuard';
-// CORREÇÃO APLICADA AQUI: Removidas as chaves da importação
+import { AdminGuard } from './components/guards/AdminGuard'; // 1. Importar o AdminGuard
 import LayoutPrincipal from './components/LayoutPrincipal'; 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -19,6 +19,7 @@ import Movimentacoes from './pages/Movimentacoes';
 import Produtos from './pages/Produtos';
 import RelatoriosPage from './pages/RelatoriosPage';
 import Vendedores from './pages/Vendedores';
+import Usuarios from './pages/Usuarios'; // 2. Importar a página de Usuários (será criada a seguir)
 
 const queryClient = new QueryClient();
 
@@ -30,12 +31,10 @@ function App() {
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
               <Routes>
-                {/* A rota de Login é pública e não é protegida pelo AuthGuard */}
                 <Route path="/login" element={<Login />} />
 
-                {/* Envolver a rota do LayoutPrincipal com o AuthGuard */}
                 <Route
-                  path="/*" // Captura todas as outras rotas
+                  path="/*"
                   element={
                     <AuthGuard>
                       <Routes>
@@ -46,6 +45,16 @@ function App() {
                           <Route path="/produtos" element={<Produtos />} />
                           <Route path="/relatorios" element={<RelatoriosPage />} />
                           <Route path="/vendedores" element={<Vendedores />} />
+                          
+                          {/* 3. Adicionar a nova rota protegida pelo AdminGuard */}
+                          <Route 
+                            path="/usuarios" 
+                            element={
+                              <AdminGuard>
+                                <Usuarios />
+                              </AdminGuard>
+                            } 
+                          />
                         </Route>
                       </Routes>
                     </AuthGuard>

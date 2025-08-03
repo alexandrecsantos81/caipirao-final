@@ -1,12 +1,13 @@
-// /frontend/src/services/api.ts
 import axios from 'axios';
 
 const AUTH_TOKEN_KEY = 'caipirao-auth-token';
 
 // CORREÇÃO: Altere a URL base para apontar para o seu backend local.
-// Certifique-se de que a porta (ex: 3000 ) é a mesma em que seu backend está rodando.
+// Certifique-se de que a porta (ex: 3000) é a mesma em que seu backend está rodando.
 const api = axios.create({
-  baseURL: 'https://caipirao-final.onrender.com', // <-- MUDE AQUI
+  // DE: baseURL: 'https://caipirao-final.onrender.com',
+  // PARA:
+  baseURL: 'http://localhost:3000', // <-- MUDE AQUI
 } );
 
 // Interceptor para adicionar o token de autenticação (código continua o mesmo)

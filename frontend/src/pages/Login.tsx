@@ -1,17 +1,14 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-
-// Caminho correto: sobe 1 nível para 'src', depois desce para 'contexts'
 import { useAuth } from '../contexts/AuthContext';
-
-// Caminho correto: sobe 1 nível para 'src', depois desce para 'components/ui'
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  // 1. Renomear o estado de 'email' para 'identificador'
+  const [identificador, setIdentificador] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -21,13 +18,13 @@ export default function Login() {
 
   const from = location.state?.from?.pathname || '/';
 
-  // CORREÇÃO DE TIPO APLICADA AQUI
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsSubmitting(true);
 
     try {
-      await login(email, password);
+      // 2. Passar o 'identificador' para a função de login
+      await login(identificador, password);
       navigate(from, { replace: true });
     } catch (error) {
       console.error("Falha no login:", error);
@@ -46,14 +43,14 @@ export default function Login() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              {/* 3. Atualizar o Label e o id do Input */}
+              <Label htmlFor="identificador">E-mail, Nickname ou Telefone</Label>
               <Input
-                id="email"
-                type="email"
+                id="identificador"
+                type="text" // Alterado para 'text' para aceitar qualquer valor
                 placeholder="seu@email.com"
-                value={email}
-                // CORREÇÃO DE TIPO APLICADA AQUI
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                value={identificador}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIdentificador(e.target.value)}
                 required
                 disabled={isSubmitting}
               />
@@ -65,7 +62,6 @@ export default function Login() {
                 type="password"
                 placeholder="Sua senha"
                 value={password}
-                // CORREÇÃO DE TIPO APLICADA AQUI
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                 required
                 disabled={isSubmitting}
