@@ -1,3 +1,5 @@
+// frontend/src/pages/Dashboard.tsx
+
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMovimentacoes, useUpdateMovimentacao } from "@/hooks/useMovimentacoes";
@@ -19,7 +21,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import QuickPaymentDialog from './QuickPaymentDialog';
 
 // --- Tipos e Funções Auxiliares ---
-// CORREÇÃO: Definição dos tipos que estavam faltando.
 type PeriodoFoco = { label: string; entradas: number; saidas: number; saldo: number };
 type PeriodoGrafico = '6M' | 'ANO' | '5A';
 type FiltroMovimentacoesData = 'hoje' | 'mes' | 'personalizado';
@@ -307,7 +308,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:justify-between sm:items-center">
               <div>
                 <CardTitle>Visão Geral Financeira</CardTitle>
                 <CardDescription>Entradas vs. Saídas por período</CardDescription>
