@@ -1,10 +1,11 @@
 // /frontend/src/pages/Dashboard.tsx
 
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom'; // 1. IMPORTAR O LINK
 import { useAuth } from '@/contexts/AuthContext';
 import { useMovimentacoes, useUpdateMovimentacao } from "@/hooks/useMovimentacoes";
 import { useDespesas } from "@/hooks/useDespesas";
-import { useAtividadeClientes } from '@/hooks/useReports'; // Importação do novo hook
+import { useAtividadeClientes } from '@/hooks/useReports';
 import { Venda } from '@/services/movimentacoes.service';
 import { toast } from 'sonner';
 
@@ -17,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Package, AlertCircle, CreditCard, TrendingUp, TrendingDown } from "lucide-react"; // Ícones adicionados
+import { Terminal, Package, AlertCircle, CreditCard, TrendingUp, TrendingDown } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import QuickPaymentDialog from './QuickPaymentDialog';
 
@@ -266,16 +267,19 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clientes Inativos</CardTitle>
-            <TrendingDown className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{atividadeClientes?.inativos ?? 0}</div>
-            <p className="text-xs text-muted-foreground">Sem compras há mais de 3 meses</p>
-          </CardContent>
-        </Card>
+        {/* 2. ENVOLVER O CARD COM O COMPONENTE LINK */}
+        <Link to="/clientes" className="cursor-pointer hover:shadow-lg transition-shadow rounded-lg">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Clientes Inativos</CardTitle>
+              <TrendingDown className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{atividadeClientes?.inativos ?? 0}</div>
+              <p className="text-xs text-muted-foreground">Sem compras há mais de 3 meses</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <Card className="border-yellow-500 bg-yellow-50/50 dark:bg-yellow-900/20 dark:border-yellow-700">

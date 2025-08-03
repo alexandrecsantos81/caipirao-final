@@ -1,3 +1,5 @@
+// /frontend/src/services/clientes.service.ts
+
 import api from './api';
 
 // Interface completa para o Cliente
@@ -13,15 +15,16 @@ export interface Cliente {
   bairro?: string;
   cep?: string;
   ponto_referencia?: string;
+  status: 'Ativo' | 'Inativo'; // <<< ALTERAÇÃO APLICADA AQUI
 }
 
-// Tipo para o payload de criação (sem o 'id')
-export type CreateClientePayload = Omit<Cliente, 'id'>;
+// Tipo para o payload de criação (sem o 'id' e 'status')
+export type CreateClientePayload = Omit<Cliente, 'id' | 'status'>;
 
-// Tipo para o payload de atualização (também sem o 'id', pois ele será passado separadamente)
-export type UpdateClientePayload = Omit<Cliente, 'id'>;
+// Tipo para o payload de atualização (sem o 'id' e 'status')
+export type UpdateClientePayload = Omit<Cliente, 'id' | 'status'>;
 
-// --- Funções da API ---
+// --- Funções da API (sem alteração na lógica) ---
 
 export const getClientes = async (): Promise<Cliente[]> => {
   const response = await api.get('/api/clientes');
@@ -33,7 +36,6 @@ export const createCliente = async (data: CreateClientePayload): Promise<Cliente
   return response.data;
 };
 
-// CORREÇÃO: A função agora aceita o ID e o payload separadamente.
 export const updateCliente = async ({ id, payload }: { id: number, payload: UpdateClientePayload }): Promise<Cliente> => {
   const response = await api.put(`/api/clientes/${id}`, payload);
   return response.data;

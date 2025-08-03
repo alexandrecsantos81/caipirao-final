@@ -1,3 +1,5 @@
+// /frontend/src/pages/Clientes.tsx
+
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,7 +9,7 @@ import { toast } from 'sonner';
 
 import { useClientes, useCreateCliente, useUpdateCliente, useDeleteCliente } from '@/hooks/useClientes';
 import { Cliente, CreateClientePayload } from '@/services/clientes.service';
-import { formatWhatsAppLink } from '@/lib/utils'; // <-- IMPORTAÇÃO DA NOVA FUNÇÃO
+import { formatWhatsAppLink } from '@/lib/utils';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +19,8 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { PlusCircle, Terminal, Phone } from 'lucide-react'; // Ícone de telefone adicionado para ilustração
+import { Badge } from '@/components/ui/badge'; // 1. IMPORTAR O BADGE
+import { PlusCircle, Terminal, Phone } from 'lucide-react';
 
 const formSchema = z.object({
   id: z.number().optional(),
@@ -167,13 +170,26 @@ export default function Clientes() {
     return (
         <div className="mt-6 rounded-md border overflow-x-auto">
             <Table>
-                <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Contato</TableHead><TableHead>Endereço Principal</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Status</TableHead> {/* 2. ADICIONAR COLUNA NO CABEÇALHO */}
+                        <TableHead>Contato</TableHead>
+                        <TableHead>Endereço Principal</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                </TableHeader>
                 <TableBody>
                     {clientes?.map((cliente) => (
                         <TableRow key={cliente.id}>
                             <TableCell className="font-medium">{cliente.nome}</TableCell>
+                            {/* 3. ADICIONAR CÉLULA COM O BADGE DE STATUS */}
                             <TableCell>
-                                {/* INÍCIO DA ALTERAÇÃO DA ROTINA 5 */}
+                                <Badge variant={cliente.status === 'Ativo' ? 'default' : 'destructive'}>
+                                    {cliente.status}
+                                </Badge>
+                            </TableCell>
+                            <TableCell>
                                 {cliente.telefone_whatsapp && cliente.contato ? (
                                     <a 
                                         href={formatWhatsAppLink(cliente.contato)} 
@@ -189,7 +205,6 @@ export default function Clientes() {
                                 ) : (
                                     <span>{formatPhone(cliente.contato)}</span>
                                 )}
-                                {/* FIM DA ALTERAÇÃO DA ROTINA 5 */}
                             </TableCell>
                             <TableCell>{`${cliente.logradouro || ''}, Qd. ${cliente.quadra || 'S/N'}, Lt. ${cliente.lote || 'S/N'} - ${cliente.bairro || 'Bairro não informado'}`}</TableCell>
                             <TableCell className="text-right space-x-2">
