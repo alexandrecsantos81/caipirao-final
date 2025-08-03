@@ -1,4 +1,4 @@
-// frontend/src/pages/RelatoriosPage.tsx
+// /frontend/src/pages/RelatoriosPage.tsx
 
 import { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
@@ -73,7 +73,6 @@ export default function RelatoriosPage() {
     });
   };
 
-  // Componente interno para a aba de Vendas Gerais para manter o escopo limpo
   const VendasGeraisTab = () => {
     const totais = useMemo(() => {
       if (!vendasQuery.data) return { valor: 0, peso: 0, transacoes: 0 };
@@ -125,7 +124,14 @@ export default function RelatoriosPage() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
+        {/*
+          - `h-auto`: Permite que a altura do container cresça conforme necessário.
+          - `flex-col sm:grid`: Em telas pequenas (mobile), usa flex-direction: column. A partir do breakpoint 'sm' (640px), volta a ser um grid.
+          - `sm:grid-cols-3`: Em telas 'sm' e maiores, define o grid com 3 colunas.
+        */}
+        <TabsList className="h-auto flex-col sm:grid sm:grid-cols-3">
+        {/* ======================== FIM DA CORREÇÃO ========================= */}
           <TabsTrigger value="vendas_gerais"><BarChart2 className="mr-2 h-4 w-4" />Vendas Gerais</TabsTrigger>
           <TabsTrigger value="ranking_produtos"><Crown className="mr-2 h-4 w-4" />Ranking de Produtos</TabsTrigger>
           <TabsTrigger value="ranking_clientes"><User className="mr-2 h-4 w-4" />Ranking de Clientes</TabsTrigger>
