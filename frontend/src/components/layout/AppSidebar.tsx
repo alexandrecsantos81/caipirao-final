@@ -1,9 +1,12 @@
-// /frontend/src/components/layout/AppSidebar.tsx
+// frontend/src/components/layout/AppSidebar.tsx
 
 import { NavLink } from 'react-router-dom';
-import { Home, ShoppingCart, Users, Package, LogOut } from 'lucide-react'; // 1. Importa o ícone LogOut
-import { useAuth } from '@/contexts/AuthContext'; // 2. Importa o hook useAuth
-import { Button } from '@/components/ui/button'; // Importa o componente Button
+import { Home, ShoppingCart, Users, Package, LogOut, UserCircle, ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Badge } from '../ui/badge';
+import { Drawer, DrawerContent } from '../ui/drawer'; // Removido DrawerOverlay e DrawerTrigger que não são usados diretamente aqui
 
 const navLinks = [
   { to: "/", label: "Dashboard", icon: Home },
@@ -12,50 +15,110 @@ const navLinks = [
   { to: "/produtos", label: "Produtos", icon: Package },
 ];
 
-export default function AppSidebar() {
-  // 3. Obtém a função logout do contexto de autenticação
-  const { logout } = useAuth();
+// CORREÇÃO APLICADA AQUI:
+// A interface foi corrigida para usar os nomes de props corretos.
+interface AppSidebarProps {
+  isCollapsed: boolean;
+  isMobileNavOpen: boolean; // O nome correto que LayoutPrincipal está enviando.
+  setIsMobileNavOpen: (isOpen: boolean) => void; // O nome correto.
+}
+
+// Componente interno para o conteúdo, para evitar duplicação.
+const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, onLinkClick?: () => void }) => {
+  const { logout, user } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    if (onLinkClick) {
+      onLinkClick();
+    }
+  };
 
   return (
-    // Aumenta a altura mínima da tela para garantir que o botão de logout fique no fundo
-    <aside className="w-64 flex-shrink-0 bg-gray-800 text-white p-4 flex flex-col min-h-screen">
-      <div>
-        <div className="text-2xl font-bold mb-8">Caipirão 2.0</div>
-        <nav>
-          <ul>
-            {navLinks.map((link) => (
-              <li key={link.to}>
-                <NavLink
-                  to={link.to}
-                  end
-                  className={({ isActive }) =>
-                    `flex items-center p-3 rounded-lg transition-colors duration-200 ${
-                      isActive
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                    }`
-                  }
-                >
-                  <link.icon className="mr-3 h-5 w-5" />
-                  {link.label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
+    <div className="flex flex-col h-full bg-muted/40">
+      <div className={cn("flex h-14 items-center border-b lg:h-[60px]", isCollapsed ? "px-2 justify-center" : "px-4 lg:px-6")}>
+        <NavLink to="/" className="flex items-center gap-2 font-semibold" onClick={onLinkClick}>
+          <Package className="h-6 w-6" />
+          {!isCollapsed && <span>Caipirão 2.0</span>}
+        </NavLink>
       </div>
 
-      {/* 4. Adiciona o botão de Logout na parte inferior */}
-      <div className="mt-auto">
+      <nav className={cn("flex-1 overflow-y-auto py-2", isCollapsed ? "px-2" : "px-2 lg:px-4")}>
+        <ul className="space-y-1">
+          {navLinks.map((link) => (
+            <li key={link.to}>
+              <NavLink
+                to={link.to}
+                end
+                onClick={onLinkClick}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 rounded-lg py-2 text-muted-foreground transition-all hover:text-primary",
+                    isCollapsed ? "px-3 justify-center" : "px-3",
+                    isActive && "bg-muted text-primary"
+                  )
+                }
+              >
+                <link.icon className="h-5 w-5" />
+                {!isCollapsed && <span className="truncate">{link.label}</span>}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div className={cn("mt-auto p-4 border-t w-full", isCollapsed && "px-2")}>
+        {user && (
+          <div className={cn("flex items-center gap-3 mb-4", isCollapsed && "justify-center")}>
+            <UserCircle className="h-8 w-8 text-muted-foreground" />
+            {!isCollapsed && (
+              <div className="flex flex-col overflow-hidden">
+                <span className="text-sm font-medium leading-none truncate">{user.email}</span>
+                {user.perfil === 'ADMIN' && (
+                  <Badge variant="destructive" className="mt-1 w-fit">
+                    <ShieldCheck className="mr-1 h-3 w-3" />
+                    Admin
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         <Button
-          onClick={logout}
-          variant="ghost" // Estilo sutil que combina com a sidebar
-          className="w-full justify-start text-gray-300 hover:bg-red-800 hover:text-white"
+          onClick={handleLogout}
+          variant="ghost"
+          className={cn("w-full text-muted-foreground hover:text-primary", isCollapsed ? "justify-center px-0" : "justify-start")}
         >
-          <LogOut className="mr-3 h-5 w-5" />
-          Sair
+          <LogOut className="h-5 w-5" />
+          {!isCollapsed && <span className="ml-3">Sair</span>}
         </Button>
       </div>
-    </aside>
+    </div>
+  );
+};
+
+
+export default function AppSidebar({ isCollapsed, isMobileNavOpen, setIsMobileNavOpen }: AppSidebarProps) {
+  return (
+    <>
+      {/* Sidebar para Desktop (visível em telas 'md' e maiores) */}
+      <aside
+        className={cn(
+          "hidden md:flex flex-col border-r transition-all duration-300 ease-in-out",
+          isCollapsed ? "w-20" : "w-[220px] lg:w-[280px]"
+        )}
+      >
+        <SidebarContent isCollapsed={isCollapsed} />
+      </aside>
+
+      {/* Drawer para Mobile (visível apenas em telas pequenas) */}
+      <div className="md:hidden">
+        <Drawer open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
+          <DrawerContent className="border-r h-full w-[280px] mt-0 rounded-none">
+            <SidebarContent isCollapsed={false} onLinkClick={() => setIsMobileNavOpen(false)} />
+          </DrawerContent>
+        </Drawer>
+      </div>
+    </>
   );
 }
