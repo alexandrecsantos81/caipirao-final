@@ -15,19 +15,19 @@ export function LayoutPrincipal() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   return (
-    // CORREÇÃO PRINCIPAL APLICADA AQUI
-    // O grid agora é definido de forma mais robusta e apenas para telas 'md' e maiores.
-    // Em telas pequenas, ele se comporta como um block normal, permitindo que o header e o main ocupem 100% da largura.
+    // 1. O contêiner principal agora é um flexbox
     <div className="flex h-screen w-full bg-background">
+      {/* A sidebar é um filho direto do flexbox */}
       <AppSidebar 
         isCollapsed={isCollapsed} 
         isMobileNavOpen={isMobileNavOpen}
         setIsMobileNavOpen={setIsMobileNavOpen}
       />
 
-      <div className="flex flex-1 flex-col h-screen">
-        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-          {/* Botão de controle do menu desktop (escondido em telas pequenas) */}
+      {/* 2. Este contêiner agrupa o header e o main */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <header className="flex h-14 shrink-0 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+          {/* Botão de controle do menu desktop */}
           <Button
             variant="outline"
             size="icon"
@@ -42,7 +42,7 @@ export function LayoutPrincipal() {
             <span className="sr-only">Recolher/Expandir Menu</span>
           </Button>
 
-          {/* Botão "hambúrguer" para abrir o menu móvel (visível apenas em telas pequenas) */}
+          {/* Botão "hambúrguer" para abrir o menu móvel */}
           <Button
             variant="outline"
             size="icon"
@@ -71,6 +71,7 @@ export function LayoutPrincipal() {
           </DropdownMenu>
         </header>
         
+        {/* 3. O <main> agora é o único elemento que pode rolar */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           <Outlet />
         </main>

@@ -2,24 +2,24 @@
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode'; // 1. Importar a biblioteca
+import { jwtDecode } from 'jwt-decode';
 import api from '../services/api';
 import { toast } from 'sonner';
 
 const AUTH_TOKEN_KEY = 'caipirao-auth-token';
 
-// 2. Definir a interface para os dados do usuário decodificados do token
 interface UserPayload {
   id: number;
   email: string;
-  perfil: 'ADMIN' | 'USER'; // Assumindo que os perfis podem ser estes
+  perfil: 'ADMIN' | 'USER';
   iat: number;
   exp: number;
 }
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: UserPayload | null; // 3. Adicionar o usuário ao contexto
+  isLoading: boolean; // 1. Adicionar estado de carregamento
+  user: UserPayload | null;
   login: (email: string, pass: string) => Promise<void>;
   logout: () => void;
 }
@@ -30,19 +30,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserPayload | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(true); // 2. Iniciar como true
 
-  // 4. Efeito para carregar e decodificar o token ao iniciar a aplicação
   useEffect(() => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (token) {
       try {
         const decodedUser = jwtDecode<UserPayload>(token);
-        // Verifica se o token não expirou
         if (decodedUser.exp * 1000 > Date.now()) {
           setUser(decodedUser);
           setIsAuthenticated(true);
         } else {
-          // Se o token expirou, limpa o armazenamento
           localStorage.removeItem(AUTH_TOKEN_KEY);
         }
       } catch (error) {
@@ -50,9 +48,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.removeItem(AUTH_TOKEN_KEY);
       }
     }
+    // 3. Finalizar o carregamento após a verificação
+    setIsLoading(false);
   }, []);
 
   const login = async (email: string, pass: string) => {
+    // ... (função de login permanece a mesma)
     try {
       const response = await api.post('/auth/login', { email, senha: pass });
       const { token } = response.data;
@@ -73,16 +74,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = useCallback(() => {
+    // ... (função de logout permanece a mesma)
     localStorage.removeItem(AUTH_TOKEN_KEY);
-    setUser(null); // Limpa os dados do usuário
+    setUser(null);
     setIsAuthenticated(false);
     navigate('/login');
     toast.info('Você foi desconectado.');
   }, [navigate]);
 
-  // 5. Passar o 'user' no valor do provider
+  // 4. Passar o 'isLoading' no valor do provider
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
