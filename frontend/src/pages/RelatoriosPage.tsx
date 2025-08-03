@@ -43,34 +43,36 @@ export default function RelatoriosPage() {
     if (value === 'ranking_clientes' && !clientesQuery.data) clientesQuery.refetch();
   };
 
-  const handleExportVendas = () => {
-    if (!vendasQuery.data) return;
-    exportToPdf({
-      reportName: 'Relatório de Vendas Gerais',
-      headers: ['Dia', 'Vendas (R$)', 'Peso (kg)', 'Nº Transações'],
-      data: vendasQuery.data.map(item => [formatDate(item.dia), formatCurrency(parseFloat(item.total_vendas)), formatNumber(parseFloat(item.peso_total)), item.transacoes]),
-      period: { start: dataInicio, end: dataFim },
-    });
-  };
-
-  const handleExportProdutos = () => {
-    if (!produtosQuery.data) return;
-    exportToPdf({
-      reportName: 'Ranking de Produtos',
-      headers: ['Pos.', 'Produto', 'Faturamento (R$)', 'Peso Vendido (kg)', 'Nº Vendas'],
-      data: produtosQuery.data.map((item, index) => [`${index + 1}º`, item.produto_nome, formatCurrency(parseFloat(item.faturamento_total)), formatNumber(parseFloat(item.peso_total)), item.transacoes]),
-      period: { start: dataInicio, end: dataFim },
-    });
-  };
-
-  const handleExportClientes = () => {
-    if (!clientesQuery.data) return;
-    exportToPdf({
-      reportName: 'Ranking de Clientes',
-      headers: ['Pos.', 'Cliente', 'Valor Gasto (R$)', 'Peso Comprado (kg)', 'Nº Compras'],
-      data: clientesQuery.data.map((item, index) => [`${index + 1}º`, item.cliente_nome, formatCurrency(parseFloat(item.faturamento_total)), formatNumber(parseFloat(item.peso_total)), item.transacoes]),
-      period: { start: dataInicio, end: dataFim },
-    });
+  const handleExport = () => {
+    switch (activeTab) {
+      case 'vendas_gerais':
+        if (!vendasQuery.data) return;
+        exportToPdf({
+          reportName: 'Relatório de Vendas Gerais',
+          headers: ['Dia', 'Vendas (R$)', 'Peso (kg)', 'Nº Transações'],
+          data: vendasQuery.data.map(item => [formatDate(item.dia), formatCurrency(parseFloat(item.total_vendas)), formatNumber(parseFloat(item.peso_total)), item.transacoes]),
+          period: { start: dataInicio, end: dataFim },
+        });
+        break;
+      case 'ranking_produtos':
+        if (!produtosQuery.data) return;
+        exportToPdf({
+          reportName: 'Ranking de Produtos',
+          headers: ['Pos.', 'Produto', 'Faturamento (R$)', 'Peso Vendido (kg)', 'Nº Vendas'],
+          data: produtosQuery.data.map((item, index) => [`${index + 1}º`, item.produto_nome, formatCurrency(parseFloat(item.faturamento_total)), formatNumber(parseFloat(item.peso_total)), item.transacoes]),
+          period: { start: dataInicio, end: dataFim },
+        });
+        break;
+      case 'ranking_clientes':
+        if (!clientesQuery.data) return;
+        exportToPdf({
+          reportName: 'Ranking de Clientes',
+          headers: ['Pos.', 'Cliente', 'Valor Gasto (R$)', 'Peso Comprado (kg)', 'Nº Compras'],
+          data: clientesQuery.data.map((item, index) => [`${index + 1}º`, item.cliente_nome, formatCurrency(parseFloat(item.faturamento_total)), formatNumber(parseFloat(item.peso_total)), item.transacoes]),
+          period: { start: dataInicio, end: dataFim },
+        });
+        break;
+    }
   };
 
   const VendasGeraisTab = () => {
@@ -90,7 +92,6 @@ export default function RelatoriosPage() {
 
     return (
       <div className="space-y-6 mt-6">
-        <div className="flex justify-end"><Button onClick={handleExportVendas} variant="outline"><FileDown className="mr-2 h-4 w-4" />Exportar para PDF</Button></div>
         <div className="grid gap-4 md:grid-cols-3">
           <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Faturamento Total</CardTitle><DollarSign className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{formatCurrency(totais.valor)}</div></CardContent></Card>
           <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Peso Total Vendido</CardTitle><Weight className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{formatNumber(totais.peso)} kg</div></CardContent></Card>
@@ -113,12 +114,17 @@ export default function RelatoriosPage() {
   return (
     <div className="p-6 space-y-6">
       <div><h1 className="text-3xl font-bold">Relatórios</h1><p className="mt-2 text-gray-600">Gere relatórios detalhados para uma visão aprofundada do seu negócio.</p></div>
+      
       <Card>
-        <CardHeader><CardTitle>Filtros do Relatório</CardTitle><CardDescription>Selecione um intervalo de datas para gerar os relatórios abaixo.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Filtros do Relatório</CardTitle><CardDescription>Selecione um período e o tipo de relatório para visualizar.</CardDescription></CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row items-end gap-4">
             <div className="grid w-full sm:w-auto gap-1.5"><Label htmlFor="data-inicio">Data de Início</Label><Input id="data-inicio" type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} /></div>
             <div className="grid w-full sm:w-auto gap-1.5"><Label htmlFor="data-fim">Data de Fim</Label><Input id="data-fim" type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} /></div>
+            <Button onClick={handleExport} variant="outline" className="w-full sm:w-auto">
+              <FileDown className="mr-2 h-4 w-4" />
+              Exportar para PDF
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -126,11 +132,11 @@ export default function RelatoriosPage() {
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
         {/*
-          - `h-auto`: Permite que a altura do container cresça conforme necessário.
-          - `flex-col sm:grid`: Em telas pequenas (mobile), usa flex-direction: column. A partir do breakpoint 'sm' (640px), volta a ser um grid.
-          - `sm:grid-cols-3`: Em telas 'sm' e maiores, define o grid com 3 colunas.
+          - `grid-cols-1`: Garante que no modo mobile (padrão) haverá apenas uma coluna.
+          - `sm:grid-cols-3`: A partir do breakpoint 'sm', o layout muda para 3 colunas.
+          - `w-full`: Garante que o container ocupe toda a largura disponível.
         */}
-        <TabsList className="h-auto flex-col sm:grid sm:grid-cols-3">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto">
         {/* ======================== FIM DA CORREÇÃO ========================= */}
           <TabsTrigger value="vendas_gerais"><BarChart2 className="mr-2 h-4 w-4" />Vendas Gerais</TabsTrigger>
           <TabsTrigger value="ranking_produtos"><Crown className="mr-2 h-4 w-4" />Ranking de Produtos</TabsTrigger>
@@ -143,7 +149,7 @@ export default function RelatoriosPage() {
           {produtosQuery.isLoading && <ReportLoader />}
           {produtosQuery.isError && <ReportError error={produtosQuery.error} />}
           {produtosQuery.data && !produtosQuery.isLoading && (
-            <Card className="mt-6"><CardHeader className="flex flex-row items-center justify-between"><div><CardTitle>Produtos Mais Vendidos</CardTitle><CardDescription>Ranking por faturamento no período selecionado.</CardDescription></div><Button onClick={handleExportProdutos} variant="outline"><FileDown className="mr-2 h-4 w-4" />Exportar para PDF</Button></CardHeader><CardContent>
+            <Card className="mt-6"><CardHeader><CardTitle>Produtos Mais Vendidos</CardTitle><CardDescription>Ranking por faturamento no período selecionado.</CardDescription></CardHeader><CardContent>
               <Table>
                 <TableHeader><TableRow><TableHead>Posição</TableHead><TableHead>Produto</TableHead><TableHead className="text-right">Faturamento</TableHead><TableHead className="text-right">Peso Vendido (kg)</TableHead><TableHead className="text-right">Nº Vendas</TableHead></TableRow></TableHeader>
                 <TableBody>{produtosQuery.data.map((item, index) => (<TableRow key={item.produto_nome}><TableCell className="font-medium">{index + 1}º</TableCell><TableCell>{item.produto_nome}</TableCell><TableCell className="text-right">{formatCurrency(parseFloat(item.faturamento_total))}</TableCell><TableCell className="text-right">{formatNumber(parseFloat(item.peso_total))}</TableCell><TableCell className="text-right">{item.transacoes}</TableCell></TableRow>))}</TableBody>
@@ -156,7 +162,7 @@ export default function RelatoriosPage() {
           {clientesQuery.isLoading && <ReportLoader />}
           {clientesQuery.isError && <ReportError error={clientesQuery.error} />}
           {clientesQuery.data && !clientesQuery.isLoading && (
-            <Card className="mt-6"><CardHeader className="flex flex-row items-center justify-between"><div><CardTitle>Clientes com Maior Volume de Compra</CardTitle><CardDescription>Ranking por valor total de compras no período selecionado.</CardDescription></div><Button onClick={handleExportClientes} variant="outline"><FileDown className="mr-2 h-4 w-4" />Exportar para PDF</Button></CardHeader><CardContent>
+            <Card className="mt-6"><CardHeader><CardTitle>Clientes com Maior Volume de Compra</CardTitle><CardDescription>Ranking por valor total de compras no período selecionado.</CardDescription></CardHeader><CardContent>
               <Table>
                 <TableHeader><TableRow><TableHead>Posição</TableHead><TableHead>Cliente</TableHead><TableHead className="text-right">Valor Gasto</TableHead><TableHead className="text-right">Peso Comprado (kg)</TableHead><TableHead className="text-right">Nº Compras</TableHead></TableRow></TableHeader>
                 <TableBody>{clientesQuery.data.map((item, index) => (<TableRow key={item.cliente_nome}><TableCell className="font-medium">{index + 1}º</TableCell><TableCell>{item.cliente_nome}</TableCell><TableCell className="text-right">{formatCurrency(parseFloat(item.faturamento_total))}</TableCell><TableCell className="text-right">{formatNumber(parseFloat(item.peso_total))}</TableCell><TableCell className="text-right">{item.transacoes}</TableCell></TableRow>))}</TableBody>
