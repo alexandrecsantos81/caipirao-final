@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
-import { Drawer, DrawerContent } from '../ui/drawer'; // Removido DrawerOverlay e DrawerTrigger que não são usados diretamente aqui
+import { Drawer, DrawerContent } from '../ui/drawer';
 
 const navLinks = [
   { to: "/", label: "Dashboard", icon: Home },
@@ -15,15 +15,12 @@ const navLinks = [
   { to: "/produtos", label: "Produtos", icon: Package },
 ];
 
-// CORREÇÃO APLICADA AQUI:
-// A interface foi corrigida para usar os nomes de props corretos.
 interface AppSidebarProps {
   isCollapsed: boolean;
-  isMobileNavOpen: boolean; // O nome correto que LayoutPrincipal está enviando.
-  setIsMobileNavOpen: (isOpen: boolean) => void; // O nome correto.
+  isMobileNavOpen: boolean;
+  setIsMobileNavOpen: (isOpen: boolean) => void;
 }
 
-// Componente interno para o conteúdo, para evitar duplicação.
 const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, onLinkClick?: () => void }) => {
   const { logout, user } = useAuth();
 
@@ -97,21 +94,21 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
   );
 };
 
-
 export default function AppSidebar({ isCollapsed, isMobileNavOpen, setIsMobileNavOpen }: AppSidebarProps) {
   return (
     <>
-      {/* Sidebar para Desktop (visível em telas 'md' e maiores) */}
+      {/* Sidebar para Desktop */}
       <aside
         className={cn(
           "hidden md:flex flex-col border-r transition-all duration-300 ease-in-out",
+          // CORREÇÃO: As larguras são aplicadas diretamente aqui
           isCollapsed ? "w-20" : "w-[220px] lg:w-[280px]"
         )}
       >
         <SidebarContent isCollapsed={isCollapsed} />
       </aside>
 
-      {/* Drawer para Mobile (visível apenas em telas pequenas) */}
+      {/* Drawer para Mobile */}
       <div className="md:hidden">
         <Drawer open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
           <DrawerContent className="border-r h-full w-[280px] mt-0 rounded-none">

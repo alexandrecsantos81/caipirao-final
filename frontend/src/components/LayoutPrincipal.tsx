@@ -15,23 +15,19 @@ export function LayoutPrincipal() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   return (
-    <div
-      className={cn(
-        "grid h-screen w-full transition-[grid-template-columns] duration-300 ease-in-out",
-        isCollapsed 
-          ? "md:grid-cols-[80px_1fr]" 
-          : "md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]"
-      )}
-    >
+    // CORREÇÃO PRINCIPAL APLICADA AQUI
+    // O grid agora é definido de forma mais robusta e apenas para telas 'md' e maiores.
+    // Em telas pequenas, ele se comporta como um block normal, permitindo que o header e o main ocupem 100% da largura.
+    <div className="flex h-screen w-full bg-background">
       <AppSidebar 
         isCollapsed={isCollapsed} 
         isMobileNavOpen={isMobileNavOpen}
         setIsMobileNavOpen={setIsMobileNavOpen}
       />
 
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-1 flex-col h-screen">
         <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-          {/* Botão de controle do menu desktop */}
+          {/* Botão de controle do menu desktop (escondido em telas pequenas) */}
           <Button
             variant="outline"
             size="icon"
@@ -46,7 +42,7 @@ export function LayoutPrincipal() {
             <span className="sr-only">Recolher/Expandir Menu</span>
           </Button>
 
-          {/* Botão "hambúrguer" para abrir o menu móvel */}
+          {/* Botão "hambúrguer" para abrir o menu móvel (visível apenas em telas pequenas) */}
           <Button
             variant="outline"
             size="icon"
