@@ -1,3 +1,5 @@
+// frontend/src/pages/Movimentacoes.tsx
+
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, PlusCircle } from 'lucide-react';
 
-// Hooks e tipos
+// Hooks, tipos e componentes
 import { useMovimentacoes, useCreateMovimentacao, useUpdateMovimentacao, useDeleteMovimentacao } from '@/hooks/useMovimentacoes';
 import { CreateMovimentacaoPayload, Venda } from '@/services/movimentacoes.service';
 import VendaForm, { VendaFormValues, vendaFormSchema } from './VendaForm';
@@ -101,7 +103,7 @@ export default function Movimentacoes() {
     if (precoManual > 0) { vendaForm.setValue("valor_total", (peso * precoManual).toFixed(2)); return; }
     const produtoSelecionado = produtos?.find(p => String(p.id) === watchedProductId);
     if (produtoSelecionado) {
-      const precoProduto = typeof produtoSelecionado.preco === 'number' ? produtoSelecionado.preco : parseFloat(produtoSelecionado.preco);
+      const precoProduto = typeof produtoSelecionado.preco === 'number' ? produtoSelecionado.preco : parseFloat(String(produtoSelecionado.preco));
       if (!isNaN(precoProduto)) {
         vendaForm.setValue("valor_total", (peso * precoProduto).toFixed(2));
       }
@@ -115,12 +117,14 @@ export default function Movimentacoes() {
   };
 
   const handleVendaEdit = (venda: Venda) => {
+    setActiveTab('vendas');
     setDespesaParaEditar(null);
     setVendaParaEditar(venda);
     setIsDrawerOpen(true);
   };
 
   const handleDespesaEdit = (despesa: Despesa) => {
+    setActiveTab('despesas');
     setVendaParaEditar(null);
     setDespesaParaEditar(despesa);
     setIsDrawerOpen(true);
@@ -149,7 +153,6 @@ export default function Movimentacoes() {
   };
 
   const handleDespesaSubmit = (values: DespesaFormValues) => {
-    // CORREÇÃO APLICADA AQUI: O payload é criado com o tipo correto.
     const payload: CreateDespesaPayload | UpdateDespesaPayload = {
         ...values,
         valor: parseFloat(values.valor),
@@ -165,10 +168,8 @@ export default function Movimentacoes() {
     const handleError = (action: string, err: any) => { toast.error(`Erro ao ${action} despesa: ${err.response?.data?.error || err.message}`); };
 
     if (despesaParaEditar) {
-      // A chamada da mutação agora é simples e correta.
       updateDespesaMutation.mutate({ id: despesaParaEditar.id, payload }, { onSuccess: () => handleSuccess('atualizada'), onError: (err) => handleError('atualizar', err) });
     } else {
-      // A chamada da mutação agora é simples e correta.
       createDespesaMutation.mutate(payload, { onSuccess: () => handleSuccess('criada'), onError: (err) => handleError('criar', err) });
     }
   };
@@ -177,11 +178,12 @@ export default function Movimentacoes() {
   const handleDespesaDelete = (id: number) => { if (window.confirm("Tem certeza?")) { deleteDespesaMutation.mutate(id, { onSuccess: () => toast.success("Despesa apagada!"), onError: (err: any) => toast.error(`Erro: ${err.response?.data?.error || err.message}`) }); } };
 
   const isEditing = !!vendaParaEditar || !!despesaParaEditar;
+  const isSubmitting = createVendaMutation.isPending || updateVendaMutation.isPending || createDespesaMutation.isPending || updateDespesaMutation.isPending;
 
   return (
     <div className="p-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col items-start gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold">Movimentações</h1>
             <p className="mt-2 text-gray-600">Registre e consulte as entradas e saídas do seu caixa.</p>
@@ -198,9 +200,9 @@ export default function Movimentacoes() {
               </DrawerHeader>
               <div className="p-4">
                 {activeTab === 'vendas' ? (
-                  <VendaForm formInstance={vendaForm} onSubmit={handleVendaSubmit} isSubmitting={createVendaMutation.isPending || updateVendaMutation.isPending} />
+                  <VendaForm formInstance={vendaForm} onSubmit={handleVendaSubmit} isSubmitting={isSubmitting} />
                 ) : (
-                  <DespesaForm formInstance={despesaForm} onSubmit={handleDespesaSubmit} isSubmitting={createDespesaMutation.isPending || updateDespesaMutation.isPending} />
+                  <DespesaForm formInstance={despesaForm} onSubmit={handleDespesaSubmit} isSubmitting={isSubmitting} />
                 )}
               </div>
             </div>
@@ -214,12 +216,12 @@ export default function Movimentacoes() {
 
         <TabsContent value="vendas">
           {isLoadingVendas && <div className="mt-6 space-y-2"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>}
-          {isErrorVendas && <Alert variant="destructive" className="mt-6"><Terminal className="h-4 w-4" /><AlertTitle>Erro</AlertTitle><AlertDescription>{errorVendas.message}</AlertDescription></Alert>}
+          {isErrorVendas && <Alert variant="destructive" className="mt-6"><Terminal className="h-4 w-4" /><AlertTitle>Erro</AlertTitle><AlertDescription>{errorVendas?.message}</AlertDescription></Alert>}
           {vendas && <VendasTable vendas={vendas} onEdit={handleVendaEdit} onDelete={handleVendaDelete} />}
         </TabsContent>
         <TabsContent value="despesas">
           {isLoadingDespesas && <div className="mt-6 space-y-2"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>}
-          {isErrorDespesas && <Alert variant="destructive" className="mt-6"><Terminal className="h-4 w-4" /><AlertTitle>Erro</AlertTitle><AlertDescription>{errorDespesas.message}</AlertDescription></Alert>}
+          {isErrorDespesas && <Alert variant="destructive" className="mt-6"><Terminal className="h-4 w-4" /><AlertTitle>Erro</AlertTitle><AlertDescription>{errorDespesas?.message}</AlertDescription></Alert>}
           {despesas && <DespesasTable despesas={despesas} onEdit={handleDespesaEdit} onDelete={handleDespesaDelete} />}
         </TabsContent>
       </Tabs>
