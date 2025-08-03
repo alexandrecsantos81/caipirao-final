@@ -1,4 +1,4 @@
-// /frontend/src/pages/Clientes.tsx
+// frontend/src/pages/Clientes.tsx
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -8,7 +8,7 @@ import InputMask from 'react-input-mask';
 import { toast } from 'sonner';
 
 import { useClientes, useCreateCliente, useUpdateCliente, useDeleteCliente } from '@/hooks/useClientes';
-import { Cliente, CreateClientePayload, UpdateClientePayload } from '@/services/clientes.service';
+import { Cliente, CreateClientePayload } from '@/services/clientes.service';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,18 +20,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PlusCircle, Terminal } from 'lucide-react';
 
-// CORREÇÃO APLICADA AQUI
+// CORREÇÃO 1: Schema simplificado
 const formSchema = z.object({
   id: z.number().optional(),
   nome: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres." }),
   contato: z.string().refine(val => {
-    const cleaned = val.replace(/\D/g, ''); // Remove todos os caracteres não numéricos
-    return cleaned.length === 10 || cleaned.length === 11; // Aceita 10 (fixo) ou 11 (celular) dígitos
+    const cleaned = val.replace(/\D/g, '');
+    return cleaned.length === 10 || cleaned.length === 11;
   }, {
-    message: "O telefone deve ter 10 ou 11 dígitos.", // Mensagem de erro mais clara
+    message: "O telefone deve ter 10 ou 11 dígitos.",
   }),
   nome_responsavel: z.string().optional(),
-  telefone_whatsapp: z.boolean().default(false),
+  telefone_whatsapp: z.boolean(), // Removido o .default(false) daqui
   logradouro: z.string().optional(),
   quadra: z.string().optional(),
   lote: z.string().optional(),
@@ -67,11 +67,12 @@ export default function Clientes() {
 
   const form = useForm<ClienteFormValues>({
     resolver: zodResolver(formSchema),
+    // CORREÇÃO 2: Valores padrão explícitos para todos os campos do schema
     defaultValues: {
       nome: '',
       contato: '',
       nome_responsavel: '',
-      telefone_whatsapp: false,
+      telefone_whatsapp: false, // O valor padrão é definido aqui
       logradouro: '',
       quadra: '',
       lote: '',
@@ -81,20 +82,21 @@ export default function Clientes() {
     },
   });
 
-  const { isSubmitting } = form.formState;
+  const { formState: { isSubmitting } } = form;
 
   const onSubmit = (data: ClienteFormValues) => {
-    const payload = {
+    // O payload agora corresponde diretamente ao tipo CreateClientePayload
+    const payload: CreateClientePayload = {
         nome: data.nome,
         contato: data.contato.replace(/\D/g, ''),
-        nome_responsavel: data.nome_responsavel,
-        telefone_whatsapp: data.telefone_whatsapp,
-        logradouro: data.logradouro,
-        quadra: data.quadra,
-        lote: data.lote,
-        bairro: data.bairro,
-        cep: data.cep?.replace(/\D/g, ''),
-        ponto_referencia: data.ponto_referencia,
+        nome_responsavel: data.nome_responsavel || undefined,
+        telefone_whatsapp: data.telefone_whatsapp, // Já é um booleano
+        logradouro: data.logradouro || undefined,
+        quadra: data.quadra || undefined,
+        lote: data.lote || undefined,
+        bairro: data.bairro || undefined,
+        cep: data.cep?.replace(/\D/g, '') || undefined,
+        ponto_referencia: data.ponto_referencia || undefined,
     };
 
     const handleSuccess = (action: string) => {
@@ -112,7 +114,7 @@ export default function Clientes() {
         onError: (err) => handleError('atualizar', err),
       });
     } else {
-      createClienteMutation.mutate(payload as CreateClientePayload, {
+      createClienteMutation.mutate(payload, {
         onSuccess: () => handleSuccess('criado'),
         onError: (err) => handleError('criar', err),
       });
@@ -123,7 +125,9 @@ export default function Clientes() {
     setClienteParaEditar(cliente);
     form.reset({
         ...cliente,
+        contato: cliente.contato || '',
         nome_responsavel: cliente.nome_responsavel || '',
+        telefone_whatsapp: cliente.telefone_whatsapp || false,
         logradouro: cliente.logradouro || '',
         quadra: cliente.quadra || '',
         lote: cliente.lote || '',
@@ -136,18 +140,7 @@ export default function Clientes() {
 
   const handleAddNew = () => {
     setClienteParaEditar(null);
-    form.reset({
-        nome: '',
-        contato: '',
-        nome_responsavel: '',
-        telefone_whatsapp: false,
-        logradouro: '',
-        quadra: '',
-        lote: '',
-        bairro: '',
-        cep: '',
-        ponto_referencia: '',
-    });
+    form.reset(); // Reseta para os defaultValues definidos no useForm
     setIsDrawerOpen(true);
   };
 
@@ -176,7 +169,7 @@ export default function Clientes() {
         return <Alert variant="destructive" className="mt-6"><Terminal className="h-4 w-4" /><AlertTitle>Erro ao Carregar</AlertTitle><AlertDescription>Não foi possível buscar os dados. Erro: {error.message}</AlertDescription></Alert>;
     }
     return (
-        <div className="mt-6 rounded-md border">
+        <div className="mt-6 rounded-md border overflow-x-auto">
             <Table>
                 <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Contato</TableHead><TableHead>Endereço Principal</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
                 <TableBody>
@@ -199,7 +192,7 @@ export default function Clientes() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col items-start gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Clientes</h1>
           <p className="mt-2 text-gray-600">Adicione, edite e gerencie seus clientes.</p>
@@ -211,7 +204,7 @@ export default function Clientes() {
 
       <Drawer open={isDrawerOpen} onOpenChange={handleDrawerOpenChange}>
         <DrawerContent>
-          <div className="mx-auto w-full p-4">
+          <div className="mx-auto w-full max-w-4xl p-4">
             <DrawerHeader>
               <DrawerTitle>{clienteParaEditar ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</DrawerTitle>
               <DrawerDescription>Preencha os campos abaixo para salvar as informações do cliente.</DrawerDescription>
@@ -220,20 +213,20 @@ export default function Clientes() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                   <FormField control={form.control} name="nome" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>Nome</FormLabel><FormControl><Input placeholder="Nome completo do cliente" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="nome_responsavel" render={({ field }) => (<FormItem><FormLabel>Responsável (Opcional)</FormLabel><FormControl><Input placeholder="Nome do responsável" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="nome_responsavel" render={({ field }) => (<FormItem><FormLabel>Responsável (Opcional)</FormLabel><FormControl><Input placeholder="Nome do responsável" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="contato" render={({ field }) => (<FormItem><FormLabel>Telefone</FormLabel><FormControl><InputMask mask="(99) 99999-9999" value={field.value} onChange={field.onChange} onBlur={field.onBlur}>{(inputProps: any) => <Input {...inputProps} placeholder="(xx) xxxxx-xxxx" />}</InputMask></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="telefone_whatsapp" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-2 pb-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="!mt-0 font-normal">É WhatsApp?</FormLabel></FormItem>)} />
                 </div>
                 <h3 className="font-semibold text-lg border-t pt-4">Endereço</h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <FormField control={form.control} name="logradouro" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>Logradouro</FormLabel><FormControl><Input placeholder="Rua, Avenida, etc." {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="quadra" render={({ field }) => (<FormItem><FormLabel>Quadra</FormLabel><FormControl><Input placeholder="Qd. 123" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="lote" render={({ field }) => (<FormItem><FormLabel>Lote</FormLabel><FormControl><Input placeholder="Lt. 45" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="logradouro" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>Logradouro</FormLabel><FormControl><Input placeholder="Rua, Avenida, etc." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="quadra" render={({ field }) => (<FormItem><FormLabel>Quadra</FormLabel><FormControl><Input placeholder="Qd. 123" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="lote" render={({ field }) => (<FormItem><FormLabel>Lote</FormLabel><FormControl><Input placeholder="Lt. 45" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormField control={form.control} name="bairro" render={({ field }) => (<FormItem><FormLabel>Bairro</FormLabel><FormControl><Input placeholder="Nome do bairro" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="cep" render={({ field }) => (<FormItem><FormLabel>CEP</FormLabel><FormControl><InputMask mask="99999-999" value={field.value} onChange={field.onChange} onBlur={field.onBlur}>{(inputProps: any) => <Input {...inputProps} placeholder="_____-___" />}</InputMask></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="ponto_referencia" render={({ field }) => (<FormItem><FormLabel>Ponto de Referência</FormLabel><FormControl><Input placeholder="Próximo a..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="bairro" render={({ field }) => (<FormItem><FormLabel>Bairro</FormLabel><FormControl><Input placeholder="Nome do bairro" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="cep" render={({ field }) => (<FormItem><FormLabel>CEP</FormLabel><FormControl><InputMask mask="99999-999" value={field.value ?? ''} onChange={field.onChange} onBlur={field.onBlur}>{(inputProps: any) => <Input {...inputProps} placeholder="_____-___" />}</InputMask></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="ponto_referencia" render={({ field }) => (<FormItem><FormLabel>Ponto de Referência</FormLabel><FormControl><Input placeholder="Próximo a..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 </div>
                 <DrawerFooter className="flex-row gap-2 px-0 pt-6">
                   <Button type="submit" disabled={isSubmitting} className="flex-1">Salvar Cliente</Button>

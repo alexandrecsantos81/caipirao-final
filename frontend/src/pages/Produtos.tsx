@@ -19,18 +19,14 @@ export default function Produtos() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [produtoParaEditar, setProdutoParaEditar] = useState<Produto | null>(null);
 
-  // Hooks de dados e mutações
   const { data: produtos, isLoading, isError, error } = useProdutos();
   const createProdutoMutation = useCreateProduto();
   const updateProdutoMutation = useUpdateProduto();
   const deleteProdutoMutation = useDeleteProduto();
 
-  // Instância do formulário
   const form = useForm<ProdutoFormValues>();
 
-  // Função chamada ao submeter o formulário
   const handleSubmit = (values: ProdutoFormValues) => {
-    // CORREÇÃO: Garante que a descrição seja 'null' se não for fornecida.
     const payload: CreateProdutoPayload | UpdateProdutoPayload = {
       nome: values.nome,
       preco: parseFloat(values.preco.replace(',', '.')),
@@ -49,13 +45,11 @@ export default function Produtos() {
     };
 
     if (produtoParaEditar) {
-      // Lógica de ATUALIZAÇÃO
       updateProdutoMutation.mutate({ id: produtoParaEditar.id, payload }, {
         onSuccess: () => handleSuccess('atualizado'),
         onError: (err) => handleError('atualizar', err),
       });
     } else {
-      // Lógica de CRIAÇÃO
       createProdutoMutation.mutate(payload as CreateProdutoPayload, {
         onSuccess: () => handleSuccess('criado'),
         onError: (err) => handleError('criar', err),
@@ -63,7 +57,6 @@ export default function Produtos() {
     }
   };
 
-  // Função para abrir o formulário em modo de edição
   const handleEdit = (produto: Produto) => {
     setProdutoParaEditar(produto);
     form.reset({
@@ -74,7 +67,6 @@ export default function Produtos() {
     setIsDrawerOpen(true);
   };
 
-  // Função para deletar um produto
   const handleDelete = (id: number) => {
     if (window.confirm("Tem certeza que deseja deletar este produto?")) {
       deleteProdutoMutation.mutate(id, {
@@ -84,7 +76,6 @@ export default function Produtos() {
     }
   };
 
-  // Função para lidar com a abertura/fechamento do Drawer
   const handleDrawerOpenChange = (open: boolean) => {
     if (!open) {
       setProdutoParaEditar(null);
@@ -93,7 +84,6 @@ export default function Produtos() {
     setIsDrawerOpen(open);
   };
 
-  // Função para renderizar o conteúdo principal (tabela, loading, erro)
   const renderContent = () => {
     if (isLoading) {
       return <div className="mt-6 space-y-2"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>;
@@ -111,7 +101,8 @@ export default function Produtos() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      {/* CORREÇÃO APLICADA AQUI */}
+      <div className="flex flex-col items-start gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Produtos</h1>
           <p className="mt-2 text-gray-600">Gerencie seus produtos, descrições e preços.</p>
