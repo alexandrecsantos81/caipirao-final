@@ -1,9 +1,11 @@
+// backend/server.js
+
 // --- 1. Importações ---
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const jwt =require('jsonwebtoken');
 const pool = require('./db');
 const { verifyToken } = require('./middleware/authMiddleware');
 
@@ -12,22 +14,19 @@ const clientesRouter = require('./routes/clientes');
 const produtosRouter = require('./routes/produtos');
 const movimentacoesRouter = require('./routes/movimentacoes');
 const despesasRouter = require('./routes/despesas');
+const reportsRouter = require('./routes/reports'); // 1. Importar a nova rota
 
 // --- 3. Inicialização do App ---
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- 4. Middlewares ---
-
-// Configuração de CORS (Cross-Origin Resource Sharing)
 const allowedOrigins = [
-  'https://caipirao.netlify.app',      // URL de produção principal  // URL antiga ou secundária
-  'http://localhost:5173'              // Ambiente de desenvolvimento local
+  'https://caipirao.netlify.app',
+  'http://localhost:5173'
 ];
-
 const corsOptions = {
   origin: function (origin, callback ) {
-    // Permite requisições sem 'origin' (como do Postman/Insomnia) ou que estejam na lista
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -36,13 +35,11 @@ const corsOptions = {
   },
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
 };
-
 app.use(cors(corsOptions));
-app.use(express.json()); // Middleware para interpretar o corpo das requisições como JSON
+app.use(express.json());
 
 // --- 5. Rotas de Autenticação (Públicas) ---
-
-// Rota para REGISTRAR um novo usuário
+// (As rotas /auth/register e /auth/login permanecem inalteradas)
 app.post('/auth/register', async (req, res) => {
   const { email, senha } = req.body;
   if (!email || !senha) {
@@ -60,7 +57,7 @@ app.post('/auth/register', async (req, res) => {
       user: novoUtilizador.rows[0]
     });
   } catch (err) {
-    if (err.code === '23505') { // Código de erro para violação de chave única (email duplicado)
+    if (err.code === '23505') {
       return res.status(409).json({ error: "Este email já está registrado." });
     }
     console.error('Erro ao registrar utilizador:', err.message);
@@ -68,7 +65,6 @@ app.post('/auth/register', async (req, res) => {
   }
 });
 
-// Rota para fazer LOGIN
 app.post('/auth/login', async (req, res) => {
   const { email, senha } = req.body;
   if (!email || !senha) {
@@ -99,11 +95,13 @@ app.post('/auth/login', async (req, res) => {
   }
 });
 
+
 // --- 6. Rotas da API (Protegidas por Token) ---
 app.use('/api/clientes', verifyToken, clientesRouter);
 app.use('/api/produtos', verifyToken, produtosRouter);
 app.use('/api/movimentacoes', verifyToken, movimentacoesRouter);
 app.use('/api/despesas', verifyToken, despesasRouter);
+app.use('/api/reports', verifyToken, reportsRouter); // 2. Registrar a nova rota
 
 // --- 7. Inicialização do Servidor ---
 app.listen(PORT, () => {
