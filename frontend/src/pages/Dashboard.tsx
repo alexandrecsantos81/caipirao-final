@@ -1,9 +1,10 @@
-// frontend/src/pages/Dashboard.tsx
+// /frontend/src/pages/Dashboard.tsx
 
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMovimentacoes, useUpdateMovimentacao } from "@/hooks/useMovimentacoes";
 import { useDespesas } from "@/hooks/useDespesas";
+import { useAtividadeClientes } from '@/hooks/useReports'; // Importação do novo hook
 import { Venda } from '@/services/movimentacoes.service';
 import { toast } from 'sonner';
 
@@ -16,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Package, AlertCircle, CreditCard } from "lucide-react";
+import { Terminal, Package, AlertCircle, CreditCard, TrendingUp, TrendingDown } from "lucide-react"; // Ícones adicionados
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import QuickPaymentDialog from './QuickPaymentDialog';
 
@@ -43,6 +44,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { data: vendas, isLoading: isLoadingVendas, isError: isErrorVendas } = useMovimentacoes();
   const { data: despesas, isLoading: isLoadingDespesas, isError: isErrorDespesas } = useDespesas();
+  const { data: atividadeClientes, isLoading: isLoadingAtividade } = useAtividadeClientes();
   const updateVendaMutation = useUpdateMovimentacao();
 
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -212,7 +214,7 @@ export default function Dashboard() {
     });
   };
 
-  const isLoading = isLoadingVendas || isLoadingDespesas;
+  const isLoading = isLoadingVendas || isLoadingDespesas || isLoadingAtividade;
   const isError = isErrorVendas || isErrorDespesas;
   const kpisEmExibicao = periodoEmFoco || kpis;
 
@@ -220,7 +222,13 @@ export default function Dashboard() {
     return (
       <div className="p-6 space-y-6">
         <Skeleton className="h-8 w-64" />
-        <div className="grid gap-4 md:grid-cols-3"><Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" /></div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+        </div>
         <Skeleton className="h-48 w-full" />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5"><Skeleton className="h-80 lg:col-span-3" /><Skeleton className="h-80 lg:col-span-2" /></div>
       </div>
@@ -242,10 +250,32 @@ export default function Dashboard() {
         <p className="text-gray-600">Análise de desempenho do seu negócio. <span className="font-semibold text-blue-600">Clique nas barras do gráfico para filtrar os valores.</span></p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Entradas ({kpisEmExibicao.label})</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-green-600">{formatCurrency(kpisEmExibicao.entradas)}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Saídas ({kpisEmExibicao.label})</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-red-600">{formatCurrency(kpisEmExibicao.saidas)}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Saldo ({kpisEmExibicao.label})</CardTitle></CardHeader><CardContent><div className={`text-2xl font-bold ${kpisEmExibicao.saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>{formatCurrency(kpisEmExibicao.saldo)}</div></CardContent></Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Clientes Ativos</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{atividadeClientes?.ativos ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Compraram nos últimos 3 meses</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Clientes Inativos</CardTitle>
+            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{atividadeClientes?.inativos ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Sem compras há mais de 3 meses</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="border-yellow-500 bg-yellow-50/50 dark:bg-yellow-900/20 dark:border-yellow-700">
