@@ -44,54 +44,42 @@ export default function Movimentacoes() {
   const vendaForm = useForm<VendaFormValues>({ resolver: zodResolver(vendaFormSchema) });
   const despesaForm = useForm<DespesaFormValues>({ resolver: zodResolver(despesaFormSchema) });
 
+  // Efeito para preencher o formulário de venda ao abrir o drawer
   useEffect(() => {
-    if (!isDrawerOpen) return;
+    if (!isDrawerOpen || activeTab !== 'vendas') return;
 
-    if (activeTab === 'vendas') {
-      if (vendaParaEditar) {
-        const produto = produtos?.find(p => p.nome === vendaParaEditar.produto_nome);
-        vendaForm.reset({
-          cliente_id: String(vendaParaEditar.cliente_id),
-          produto_id: produto ? String(produto.id) : "",
-          data_venda: vendaParaEditar.data_venda.split('T')[0],
-          data_vencimento: vendaParaEditar.data_vencimento?.split('T')[0] || '',
-          peso_produto: String(vendaParaEditar.peso || ''),
-          preco_manual: String(vendaParaEditar.preco_manual || ''),
-          valor_total: String(vendaParaEditar.valor_total || ''),
-          data_pagamento: vendaParaEditar.data_pagamento?.split('T')[0] || '',
-          responsavel_venda: vendaParaEditar.responsavel_venda || '',
-        });
-      } else {
-        vendaForm.reset({
-          cliente_id: "",
-          produto_id: "",
-          data_venda: new Date().toISOString().split('T')[0],
-          data_vencimento: "",
-          peso_produto: "",
-          preco_manual: "",
-          valor_total: "",
-          data_pagamento: "",
-          responsavel_venda: "",
-        });
-      }
+    if (vendaParaEditar) {
+      const produto = produtos?.find(p => p.nome === vendaParaEditar.produto_nome);
+      vendaForm.reset({
+        cliente_id: String(vendaParaEditar.cliente_id),
+        produto_id: produto ? String(produto.id) : "",
+        data_venda: vendaParaEditar.data_venda.split('T')[0],
+        data_vencimento: vendaParaEditar.data_vencimento?.split('T')[0] || '',
+        peso_produto: String(vendaParaEditar.peso || ''),
+        preco_manual: String(vendaParaEditar.preco_manual || ''),
+        valor_total: String(vendaParaEditar.valor_total || ''),
+        data_pagamento: vendaParaEditar.data_pagamento?.split('T')[0] || '',
+        // ======================= INÍCIO DA CORREÇÃO =======================
+        // O campo no formulário é 'responsavel_venda_id', e o valor vem do objeto 'vendaParaEditar'.
+        responsavel_venda_id: String(vendaParaEditar.responsavel_venda_id || ''),
+        // ======================== FIM DA CORREÇÃO =========================
+      });
     } else {
-      if (despesaParaEditar) {
-        despesaForm.reset({
-          ...despesaParaEditar,
-          valor: String(despesaParaEditar.valor),
-          discriminacao: despesaParaEditar.discriminacao || '',
-          nome_recebedor: despesaParaEditar.nome_recebedor || '',
-          data_pagamento: despesaParaEditar.data_pagamento?.split('T')[0] || '',
-          data_vencimento: despesaParaEditar.data_vencimento?.split('T')[0] || '',
-          forma_pagamento: despesaParaEditar.forma_pagamento || '',
-          responsavel_pagamento: despesaParaEditar.responsavel_pagamento || ''
-        });
-      } else {
-        despesaForm.reset({ tipo_saida: '', valor: '', discriminacao: '', nome_recebedor: '', data_pagamento: '', data_vencimento: '', forma_pagamento: '', responsavel_pagamento: '' });
-      }
+      vendaForm.reset({
+        cliente_id: "",
+        produto_id: "",
+        data_venda: new Date().toISOString().split('T')[0],
+        data_vencimento: "",
+        peso_produto: "",
+        preco_manual: "",
+        valor_total: "",
+        data_pagamento: "",
+        responsavel_venda_id: "", // Limpa o campo
+      });
     }
-  }, [isDrawerOpen, vendaParaEditar, despesaParaEditar, activeTab, produtos, vendaForm, despesaForm]);
+  }, [isDrawerOpen, vendaParaEditar, activeTab, produtos, vendaForm]);
 
+  // Efeito para calcular o valor total (sem alterações)
   const watchedProductId = vendaForm.watch("produto_id");
   const watchedPeso = vendaForm.watch("peso_produto");
   const watchedPrecoManual = vendaForm.watch("preco_manual");
@@ -110,6 +98,34 @@ export default function Movimentacoes() {
     }
   }, [watchedProductId, watchedPeso, watchedPrecoManual, produtos, vendaForm]);
 
+  // Função para submeter o formulário de venda (sem alterações nesta parte)
+  const handleVendaSubmit = (values: VendaFormValues) => {
+    const produtoSelecionado = produtos?.find(p => String(p.id) === values.produto_id);
+    
+    const payload: CreateMovimentacaoPayload = { 
+        cliente_id: Number(values.cliente_id), 
+        produto_nome: produtoSelecionado?.nome || 'Produto não encontrado', 
+        data_venda: values.data_venda, 
+        data_pagamento: values.data_pagamento || null, 
+        data_vencimento: values.data_vencimento || null,
+        peso_produto: values.peso_produto ? parseFloat(values.peso_produto) : null, 
+        valor_total: parseFloat(values.valor_total), 
+        preco_manual: values.preco_manual ? parseFloat(values.preco_manual) : null, 
+        responsavel_venda_id: Number(values.responsavel_venda_id)
+    };
+
+    const handleSuccess = (action: string) => { toast.success(`Venda ${action} com sucesso!`); setIsDrawerOpen(false); };
+    const handleError = (action: string, err: any) => { toast.error(`Erro ao ${action} venda: ${err.response?.data?.error || err.message}`); };
+    
+    if (vendaParaEditar) {
+      updateVendaMutation.mutate({ id: vendaParaEditar.id, payload }, { onSuccess: () => handleSuccess('atualizada'), onError: (err) => handleError('atualizar', err) });
+    } else {
+      createVendaMutation.mutate(payload, { onSuccess: () => handleSuccess('registrada'), onError: (err) => handleError('registrar', err) });
+    }
+  };
+
+  // O resto do arquivo permanece o mesmo
+  // ... (código restante sem alterações)
   const handleAddNew = () => {
     setVendaParaEditar(null);
     setDespesaParaEditar(null);
@@ -122,36 +138,14 @@ export default function Movimentacoes() {
     setVendaParaEditar(venda);
     setIsDrawerOpen(true);
   };
-
+  
   const handleDespesaEdit = (despesa: Despesa) => {
     setActiveTab('despesas');
     setVendaParaEditar(null);
     setDespesaParaEditar(despesa);
     setIsDrawerOpen(true);
   };
-
-  const handleVendaSubmit = (values: VendaFormValues) => {
-    const produtoSelecionado = produtos?.find(p => String(p.id) === values.produto_id);
-    const payload: CreateMovimentacaoPayload = { 
-        cliente_id: Number(values.cliente_id), 
-        produto_nome: produtoSelecionado?.nome || 'Produto não encontrado', 
-        data_venda: values.data_venda, 
-        data_pagamento: values.data_pagamento || null, 
-        data_vencimento: values.data_vencimento || null,
-        peso_produto: values.peso_produto ? parseFloat(values.peso_produto) : null, 
-        valor_total: parseFloat(values.valor_total), 
-        preco_manual: values.preco_manual ? parseFloat(values.preco_manual) : null, 
-        responsavel_venda: values.responsavel_venda || null 
-    };
-    const handleSuccess = (action: string) => { toast.success(`Venda ${action} com sucesso!`); setIsDrawerOpen(false); };
-    const handleError = (action: string, err: any) => { toast.error(`Erro ao ${action} venda: ${err.response?.data?.error || err.message}`); };
-    if (vendaParaEditar) {
-      updateVendaMutation.mutate({ id: vendaParaEditar.id, payload }, { onSuccess: () => handleSuccess('atualizada'), onError: (err) => handleError('atualizar', err) });
-    } else {
-      createVendaMutation.mutate(payload, { onSuccess: () => handleSuccess('registrada'), onError: (err) => handleError('registrar', err) });
-    }
-  };
-
+  
   const handleDespesaSubmit = (values: DespesaFormValues) => {
     const payload: CreateDespesaPayload | UpdateDespesaPayload = {
         ...values,

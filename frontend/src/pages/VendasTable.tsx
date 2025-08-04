@@ -1,9 +1,9 @@
 // frontend/src/pages/VendasTable.tsx
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge"; // Importar Badge
+import { Badge } from "@/components/ui/badge";
 import { Venda } from "@/services/movimentacoes.service";
-import { CheckCircle2 } from "lucide-react"; // Importar ícone
+import { CheckCircle2, User } from "lucide-react";
 
 interface VendasTableProps {
   vendas: Venda[];
@@ -16,14 +16,15 @@ const formatDate = (dateString: string | null) => dateString ? new Date(dateStri
 
 export default function VendasTable({ vendas, onEdit, onDelete }: VendasTableProps) {
   return (
-    <div className="rounded-lg border shadow-sm">
+    <div className="rounded-lg border shadow-sm overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Data da Venda</TableHead>
             <TableHead>Cliente</TableHead>
             <TableHead>Produto</TableHead>
-            <TableHead>Status</TableHead> {/* NOVA COLUNA */}
+            <TableHead>Vendedor</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead className="text-right">Valor Total</TableHead>
             <TableHead className="text-center w-[180px]">Ações</TableHead>
           </TableRow>
@@ -34,7 +35,13 @@ export default function VendasTable({ vendas, onEdit, onDelete }: VendasTablePro
               <TableCell>{formatDate(venda.data_venda)}</TableCell>
               <TableCell>{venda.cliente_nome}</TableCell>
               <TableCell>{venda.produto_nome}</TableCell>
-              {/* CÉLULA DE STATUS */}
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  {/* CORREÇÃO: Usar o novo campo 'responsavel_venda_nome' */}
+                  <span className="truncate">{venda.responsavel_venda_nome || 'N/A'}</span>
+                </div>
+              </TableCell>
               <TableCell>
                 {venda.data_pagamento ? (
                   <Badge variant="default" className="bg-green-600 hover:bg-green-700">
@@ -49,20 +56,8 @@ export default function VendasTable({ vendas, onEdit, onDelete }: VendasTablePro
                 {formatCurrency(venda.valor_total)}
               </TableCell>
               <TableCell className="text-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEdit(venda)}
-                >
-                  Editar
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => onDelete(venda.id)}
-                >
-                  Deletar
-                </Button>
+                <Button variant="outline" size="sm" onClick={() => onEdit(venda)}>Editar</Button>
+                <Button variant="destructive" size="sm" onClick={() => onDelete(venda.id)}>Deletar</Button>
               </TableCell>
             </TableRow>
           ))}

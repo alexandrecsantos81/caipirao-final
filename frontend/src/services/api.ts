@@ -7,7 +7,7 @@ const AUTH_TOKEN_KEY = 'caipirao-auth-token';
 const api = axios.create({
   // DE: baseURL: 'https://caipirao-final.onrender.com',
   // PARA:
-  baseURL: 'http://localhost:3000', // <-- MUDE AQUI
+  baseURL: 'https://caipirao-final.onrender.com', // <-- MUDE AQUI
 } );
 
 // Interceptor para adicionar o token de autenticação (código continua o mesmo)

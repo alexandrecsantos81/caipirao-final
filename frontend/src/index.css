@@ -1,8 +1,9 @@
 /* /frontend/src/index.css */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
- 
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -58,3 +59,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ======================= INÍCIO DA CORREÇÃO FINAL ======================= */
+@layer utilities {
+  /*
+    Esta regra usa a nossa classe customizada para aplicar o esquema de cores
+    e o filtro de inversão ao ícone do calendário.
+    O uso de @layer utilities dá a esta regra uma prioridade mais alta.
+  */
+  .dark-date-picker-icon {
+    color-scheme: dark;
+  }
+  .dark-date-picker-icon::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+}
+/* ======================== FIM DA CORREÇÃO FINAL ========================= */

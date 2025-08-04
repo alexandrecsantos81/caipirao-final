@@ -110,7 +110,9 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
             <UserCircle className="h-8 w-8 text-muted-foreground" />
             {!isCollapsed && (
               <div className="flex flex-col overflow-hidden">
-                <span className="text-sm font-medium leading-none truncate">{user.email}</span>
+                <span className="text-sm font-medium leading-none truncate">
+                  {user.nickname || user.email}
+                </span>
                 {user.perfil === 'ADMIN' && (
                   <Badge variant="destructive" className="mt-1 w-fit">
                     <ShieldCheck className="mr-1 h-3 w-3" />

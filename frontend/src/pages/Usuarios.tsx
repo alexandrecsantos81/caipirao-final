@@ -1,14 +1,16 @@
+// frontend/src/pages/Usuarios.tsx
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
-// Hooks e tipos
+// Hooks, Services e Componentes
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from "@/hooks/useUsers";
 import { User, CreateUserPayload, UpdateUserPayload } from "@/services/users.service";
 import UserForm, { UserFormValues, userFormSchema } from "./UserForm";
+import { formatWhatsAppLink, formatPhone } from "@/lib/utils"; // Importando formatPhone
 
-// Componentes e Ícones
 import { PlusCircle, Terminal, ShieldCheck, User as UserIcon, Trash2, Edit, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,25 +19,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerTrigger, DrawerClose } from "@/components/ui/drawer";
 
-// Funções Utilitárias
-import { formatWhatsAppLink, formatPhone } from "@/lib/utils";
-
 export default function Usuarios() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
 
-  // ==================================================================
-  //      INÍCIO DA CORREÇÃO: Bloco de código restaurado
-  // ==================================================================
+  // Hooks do React Query para interagir com a API
   const { data: users, isLoading, isError, error } = useUsers();
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
-  // ==================================================================
-  //       FIM DA CORREÇÃO
-  // ==================================================================
 
+  // Schema de validação do formulário, que exige senha apenas na criação
   const formSchemaWithPasswordValidation = userFormSchema.refine(data => {
+    // Se não estiver editando (ou seja, criando um novo), a senha é obrigatória.
     return !!userToEdit || (data.senha && data.senha.length > 0);
   }, {
     message: "A senha é obrigatória para criar um novo usuário.",
@@ -47,22 +43,35 @@ export default function Usuarios() {
     defaultValues: { email: '', nickname: '', telefone: '', senha: '', perfil: 'USER' },
   });
 
+  // Função para abrir o drawer, seja para criar ou editar
   const handleOpenDrawer = (user: User | null) => {
     setUserToEdit(user);
     if (user) {
-      form.reset({ email: user.email, perfil: user.perfil, nickname: user.nickname || '', telefone: user.telefone || '', senha: '' });
+      // Preenche o formulário com os dados do usuário para edição
+      form.reset({ 
+        email: user.email, 
+        perfil: user.perfil, 
+        nickname: user.nickname || '', 
+        telefone: user.telefone || '', 
+        senha: '' // Senha fica em branco por segurança
+      });
     } else {
+      // Limpa o formulário para a criação de um novo usuário
       form.reset({ email: '', nickname: '', telefone: '', senha: '', perfil: 'USER' });
     }
     setIsDrawerOpen(true);
   };
 
+  // Função chamada ao submeter o formulário
   const handleFormSubmit = (values: UserFormValues) => {
+    // Monta o payload com base nos valores do formulário
     const payload: CreateUserPayload | UpdateUserPayload = {
       email: values.email,
       perfil: values.perfil,
       nickname: values.nickname || null,
+      // Remove a máscara do telefone antes de enviar
       telefone: values.telefone ? values.telefone.replace(/\D/g, '') : null,
+      // Inclui a senha apenas se ela foi preenchida
       ...(values.senha && { senha: values.senha }),
     };
 
@@ -71,6 +80,7 @@ export default function Usuarios() {
       setIsDrawerOpen(false);
     };
 
+    // ESTA FUNÇÃO IRÁ CAPTURAR OS ERROS DO BACKEND, INCLUINDO O DO "ÚLTIMO ADMIN"
     const handleError = (action: string, err: any) => {
       toast.error(`Erro ao ${action} usuário: ${err.response?.data?.error || err.message}`);
     };
@@ -88,15 +98,18 @@ export default function Usuarios() {
     }
   };
 
+  // Função para deletar um usuário
   const handleDelete = (userId: number) => {
     if (window.confirm("Tem certeza que deseja deletar este usuário? Esta ação não pode ser desfeita.")) {
       deleteUserMutation.mutate(userId, {
         onSuccess: () => toast.success("Usuário deletado com sucesso!"),
+        // ESTA FUNÇÃO TAMBÉM CAPTURARÁ O ERRO DE "ÚLTIMO ADMIN"
         onError: (err: any) => toast.error(`Erro ao deletar: ${err.response?.data?.error || err.message}`),
       });
     }
   };
 
+  // Função para renderizar o conteúdo principal (tabela, loader ou erro)
   const renderContent = () => {
     if (isLoading) {
       return <div className="mt-6 space-y-2"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>;
@@ -105,7 +118,7 @@ export default function Usuarios() {
       return <Alert variant="destructive" className="mt-6"><Terminal className="h-4 w-4" /><AlertTitle>Erro</AlertTitle><AlertDescription>{error.message}</AlertDescription></Alert>;
     }
     return (
-      <div className="mt-6 rounded-md border">
+      <div className="mt-6 rounded-md border overflow-x-auto">
         <Table>
           <TableHeader><TableRow>
             <TableHead>E-mail</TableHead>
@@ -143,8 +156,12 @@ export default function Usuarios() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleOpenDrawer(user)}><Edit className="mr-2 h-4 w-4" />Editar</Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(user.id)}><Trash2 className="mr-2 h-4 w-4" />Deletar</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleOpenDrawer(user)}>
+                      <Edit className="mr-2 h-4 w-4" />Editar
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(user.id)}>
+                      <Trash2 className="mr-2 h-4 w-4" />Deletar
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -180,16 +197,14 @@ export default function Usuarios() {
                 {userToEdit ? 'Altere os detalhes abaixo para atualizar o usuário.' : 'Preencha os detalhes para adicionar um novo usuário.'}
               </DrawerDescription>
             </DrawerHeader>
-            
             <UserForm
               formInstance={form}
               onSubmit={handleFormSubmit}
               isSubmitting={isSubmitting}
               isEditing={!!userToEdit}
             />
-
             <DrawerClose asChild>
-              <Button variant="outline" className="mt-4 w-full">Cancelar</Button>
+                <Button variant="outline" className="mt-4">Cancelar</Button>
             </DrawerClose>
           </div>
         </DrawerContent>

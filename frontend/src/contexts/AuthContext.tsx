@@ -11,6 +11,7 @@ interface UserPayload {
   id: number;
   email: string;
   perfil: 'ADMIN' | 'USER';
+  nickname: string | null; // << ADICIONAR ESTA LINHA
   iat: number;
   exp: number;
 }

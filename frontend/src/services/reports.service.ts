@@ -37,7 +37,7 @@ export interface AtividadeClientesData {
 // NOVA INTERFACE: Define a estrutura dos dados de produtividade do vendedor
 export interface SellerProductivityData {
   vendedor_id: number;
-  vendedor_email: string;
+  vendedor_nome: string; // << ALTERAÇÃO DE 'vendedor_email' PARA 'vendedor_nome'
   total_vendas: string;
   numero_vendas: string;
   ticket_medio: string;
