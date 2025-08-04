@@ -3,11 +3,11 @@
 // --- 1. Importações ---
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+const cors =require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('./db');
-const { verifyToken } = require('./middleware/authMiddleware');
+const { verifyToken, checkAdmin } = require('./middleware/authMiddleware');
 
 // --- 2. Importações das Rotas ---
 const clientesRouter = require('./routes/clientes');
@@ -15,6 +15,7 @@ const produtosRouter = require('./routes/produtos');
 const movimentacoesRouter = require('./routes/movimentacoes');
 const despesasRouter = require('./routes/despesas');
 const reportsRouter = require('./routes/reports');
+const usersRouter = require('./routes/users');
 
 // --- 3. Inicialização do App ---
 const app = express();
@@ -39,7 +40,6 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // --- 5. Rotas de Autenticação (Públicas) ---
-// A lógica de autenticação fica diretamente aqui, como estava antes.
 
 // Rota para REGISTRAR um novo usuário
 app.post('/auth/register', async (req, res) => {
@@ -50,9 +50,13 @@ app.post('/auth/register', async (req, res) => {
   try {
     const salt = await bcrypt.genSalt(10);
     const senhaHash = await bcrypt.hash(senha, salt);
+    
+    const { rowCount } = await pool.query('SELECT id FROM utilizadores');
+    const perfil = rowCount === 0 ? 'ADMIN' : 'USER';
+
     const novoUtilizador = await pool.query(
-      "INSERT INTO utilizadores (email, senha_hash) VALUES ($1, $2) RETURNING id, email",
-      [email, senhaHash]
+      "INSERT INTO utilizadores (email, senha_hash, perfil) VALUES ($1, $2, $3) RETURNING id, email, perfil",
+      [email, senhaHash, perfil]
     );
     res.status(201).json({
       message: "Utilizador registrado com sucesso!",
@@ -67,14 +71,16 @@ app.post('/auth/register', async (req, res) => {
   }
 });
 
-// Rota para fazer LOGIN
+// Rota para fazer LOGIN (MODIFICADA PARA ACEITAR MÚLTIPLOS IDENTIFICADORES)
 app.post('/auth/login', async (req, res) => {
-  const { email, senha } = req.body;
-  if (!email || !senha) {
-    return res.status(400).json({ error: "Email e senha são obrigatórios." });
+  const { identificador, senha } = req.body;
+  if (!identificador || !senha) {
+    return res.status(400).json({ error: "O identificador e a senha são obrigatórios." });
   }
   try {
-    const result = await pool.query("SELECT * FROM utilizadores WHERE email = $1", [email]);
+    // A query agora busca em três colunas: email, nickname e telefone
+    const query = "SELECT * FROM utilizadores WHERE email = $1 OR nickname = $1 OR telefone = $1";
+    const result = await pool.query(query, [identificador]);
     const utilizador = result.rows[0];
 
     if (!utilizador) {
@@ -86,11 +92,19 @@ app.post('/auth/login', async (req, res) => {
       return res.status(401).json({ error: "Credenciais inválidas." });
     }
 
+    const tokenPayload = {
+      id: utilizador.id,
+      email: utilizador.email,
+      perfil: utilizador.perfil,
+      nickname: utilizador.nickname // << CAMPO ADICIONADO
+    };
+
     const token = jwt.sign(
-      { email: utilizador.email, id: utilizador.id, perfil: utilizador.perfil },
+      tokenPayload,
       process.env.JWT_SECRET,
       { expiresIn: '8h' }
     );
+    
     res.json({ token });
   } catch (err) {
     console.error('Erro no servidor durante o login:', err.message);
@@ -105,6 +119,7 @@ app.use('/api/produtos', verifyToken, produtosRouter);
 app.use('/api/movimentacoes', verifyToken, movimentacoesRouter);
 app.use('/api/despesas', verifyToken, despesasRouter);
 app.use('/api/reports', verifyToken, reportsRouter);
+app.use('/api/users', verifyToken, checkAdmin, usersRouter);
 
 // --- 7. Inicialização do Servidor ---
 app.listen(PORT, () => {

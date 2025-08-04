@@ -4,6 +4,8 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
+// ... (as outras rotas de relatório: /atividade-clientes, /vendas-por-periodo, /ranking-produtos, /ranking-clientes permanecem exatamente iguais) ...
+
 /**
  * @route   GET /api/reports/atividade-clientes
  * @desc    Obtém a contagem de clientes ativos e inativos.
@@ -11,14 +13,6 @@ const pool = require('../db');
  */
 router.get('/atividade-clientes', async (req, res) => {
   try {
-    // ======================= INÍCIO DA CORREÇÃO =======================
-    // A query foi reestruturada para ser mais precisa.
-    // 1. A subquery `ultimas_compras` filtra APENAS as movimentações de 'ENTRADA'
-    //    e encontra a data da última compra para cada cliente que já comprou.
-    // 2. A query principal faz um LEFT JOIN da tabela `clientes` com esta subquery.
-    //    - Clientes que nunca compraram terão `uc.ultima_compra` como NULL.
-    //    - Clientes que já compraram terão a data da sua última compra.
-    // 3. O CASE então classifica corretamente com base na data ou na sua ausência.
     const query = `
       WITH ultimas_compras AS (
         SELECT
@@ -47,10 +41,13 @@ router.get('/atividade-clientes', async (req, res) => {
           ultimas_compras uc ON c.id = uc.cliente_id
       ) AS c;
     `;
-    // ======================== FIM DA CORREÇÃO =========================
 
     const { rows } = await pool.query(query);
-    res.json(rows[0]);
+    const result = {
+        ativos: parseInt(rows[0].ativos, 10) || 0,
+        inativos: parseInt(rows[0].inativos, 10) || 0
+    };
+    res.json(result);
 
   } catch (err) {
     console.error('Erro ao gerar relatório de atividade de clientes:', err.stack);
@@ -59,8 +56,11 @@ router.get('/atividade-clientes', async (req, res) => {
 });
 
 
-// --- DEMAIS ROTAS (sem alteração) ---
-
+/**
+ * @route   GET /api/reports/vendas-por-periodo
+ * @desc    Obtém o total de vendas, peso e transações agrupados por dia.
+ * @access  Private
+ */
 router.get('/vendas-por-periodo', async (req, res) => {
   const { data_inicio, data_fim } = req.query;
   if (!data_inicio || !data_fim) {
@@ -86,6 +86,11 @@ router.get('/vendas-por-periodo', async (req, res) => {
   }
 });
 
+/**
+ * @route   GET /api/reports/ranking-produtos
+ * @desc    Obtém o ranking de produtos mais vendidos por faturamento.
+ * @access  Private
+ */
 router.get('/ranking-produtos', async (req, res) => {
   const { data_inicio, data_fim } = req.query;
   if (!data_inicio || !data_fim) {
@@ -111,6 +116,11 @@ router.get('/ranking-produtos', async (req, res) => {
   }
 });
 
+/**
+ * @route   GET /api/reports/ranking-clientes
+ * @desc    Obtém o ranking de clientes que mais compraram.
+ * @access  Private
+ */
 router.get('/ranking-clientes', async (req, res) => {
   const { data_inicio, data_fim } = req.query;
   if (!data_inicio || !data_fim) {
@@ -134,6 +144,54 @@ router.get('/ranking-clientes', async (req, res) => {
   } catch (err) {
     console.error('Erro ao gerar ranking de clientes:', err.stack);
     res.status(500).json({ error: "Erro no servidor ao gerar o relatório." });
+  }
+});
+
+
+/**
+ * @route   GET /api/reports/seller-productivity
+ * @desc    Obtém a produtividade dos vendedores em um determinado período.
+ * @access  Private
+ */
+router.get('/seller-productivity', async (req, res) => {
+  const { data_inicio, data_fim } = req.query;
+
+  if (!data_inicio || !data_fim) {
+    return res.status(400).json({ error: "As datas de início e fim são obrigatórias." });
+  }
+
+  try {
+    // ======================= INÍCIO DA CORREÇÃO =======================
+    // A cláusula WHERE foi modificada para incluir utilizadores com perfil 'USER'
+    // OU qualquer utilizador que tenha vendas registadas no período.
+    const query = `
+      SELECT
+        u.id AS vendedor_id,
+        COALESCE(u.nickname, u.email) AS vendedor_nome,
+        COALESCE(SUM(m.valor), 0) AS total_vendas,
+        COALESCE(COUNT(m.id), 0) AS numero_vendas,
+        COALESCE(AVG(m.valor), 0) AS ticket_medio
+      FROM
+        utilizadores u
+      LEFT JOIN
+        movimentacoes m ON u.id = m.responsavel_venda_id
+                       AND m.tipo = 'ENTRADA'
+                       AND m.data BETWEEN $1 AND $2
+      WHERE
+        u.perfil = 'USER' OR u.id IN (
+          SELECT DISTINCT responsavel_venda_id FROM movimentacoes WHERE responsavel_venda_id IS NOT NULL AND data BETWEEN $1 AND $2
+        )
+      GROUP BY
+        u.id, u.nickname, u.email
+      ORDER BY
+        total_vendas DESC, vendedor_nome ASC;
+    `;
+    // ======================== FIM DA CORREÇÃO =========================
+    const { rows } = await pool.query(query, [data_inicio, data_fim]);
+    res.json(rows);
+  } catch (err) {
+    console.error('Erro ao gerar relatório de produtividade de vendedores:', err.stack);
+    res.status(500).json({ error: "Erro no servidor ao gerar o relatório de produtividade." });
   }
 });
 
