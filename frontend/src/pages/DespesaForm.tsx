@@ -1,11 +1,11 @@
-// /frontend/src/pages/DespesaForm.tsx
-
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+// 1. Importar os componentes do Select
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // O schema de validação permanece o mesmo
 export const formSchema = z.object({
@@ -21,33 +21,57 @@ export const formSchema = z.object({
   responsavel_pagamento: z.string().optional(),
 });
 
-// O tipo para os valores do formulário permanece o mesmo
 export type DespesaFormValues = z.infer<typeof formSchema>;
 
-// A interface de props foi ATUALIZADA para receber a instância do form
 interface DespesaFormProps {
   onSubmit: (values: DespesaFormValues) => void;
   isSubmitting: boolean;
   formInstance: UseFormReturn<DespesaFormValues>;
 }
 
-export default function DespesaForm({ onSubmit, isSubmitting, formInstance: form }: DespesaFormProps) {
-  // A criação do form foi removida daqui. Agora ele vem das props.
-  // A função 'handleFormSubmit' também foi removida, pois a lógica de tratamento
-  // de dados (converter para número, etc.) agora reside no componente pai (Movimentacoes.tsx).
+// 2. Definir a lista de tipos de despesa
+const tiposDeDespesa = [
+  "Insumos de Produção",
+  "Mão de Obra",
+  "Materiais e Embalagens",
+  "Despesas Operacionais",
+  "Encargos e Tributos",
+  "Despesas Administrativas",
+  "Financeiras",
+  "Remuneração de Sócios",
+  "Outros" // Adicionado para casos não previstos
+];
 
+export default function DespesaForm({ onSubmit, isSubmitting, formInstance: form }: DespesaFormProps) {
   return (
     <Form {...form}>
-      {/* O handleSubmit agora chama diretamente a função onSubmit recebida via props */}
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-1">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField control={form.control} name="tipo_saida" render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tipo de Saída (Ex: Salário, Insumos)</FormLabel>
-              <FormControl><Input placeholder="Tipo da despesa" {...field} /></FormControl>
-              <FormMessage />
-            </FormItem>
-          )} />
+          {/* 3. Substituir o Input pelo Select */}
+          <FormField
+            control={form.control}
+            name="tipo_saida"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de Saída</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo da despesa" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {tiposDeDespesa.map((tipo) => (
+                      <SelectItem key={tipo} value={tipo}>
+                        {tipo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField control={form.control} name="valor" render={({ field }) => (
             <FormItem>
               <FormLabel>Valor (R$)</FormLabel>
