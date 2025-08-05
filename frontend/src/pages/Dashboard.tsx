@@ -1,6 +1,6 @@
 // /frontend/src/pages/Dashboard.tsx
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMovimentacoes, useUpdateMovimentacao } from "@/hooks/useMovimentacoes";
@@ -9,6 +9,7 @@ import { useAtividadeClientes, useRankingClientes, useRankingProdutos, useSeller
 import { Venda, UpdateMovimentacaoPayload } from '@/services/movimentacoes.service';
 import { toast } from 'sonner';
 
+// Componentes de UI
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Terminal, Package, AlertCircle, CreditCard, TrendingUp, TrendingDown, Crown, Users } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import QuickPaymentDialog from './QuickPaymentDialog';
@@ -27,6 +29,7 @@ type PeriodoFoco = { label: string; entradas: number; saidas: number; saldo: num
 type PeriodoGrafico = '6M' | 'ANO' | '5A';
 type FiltroMovimentacoesData = 'hoje' | 'mes' | 'personalizado';
 type FiltroMovimentacoesTipo = 'todos' | 'Entrada' | 'Saída';
+type QuickFilterType = 'mes_atual' | 'ultimos_30_dias' | 'ano_atual';
 
 interface Vencimento {
   cliente_nome: string;
@@ -46,12 +49,63 @@ export default function Dashboard() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [vendaParaQuitar, setVendaParaQuitar] = useState<Venda | null>(null);
   
+  // Estados para o filtro principal
   const [periodoGrafico, setPeriodoGrafico] = useState<PeriodoGrafico>('6M');
   const [periodoEmFoco, setPeriodoEmFoco] = useState<PeriodoFoco | null>(null);
+  
+  // Estados para o filtro do histórico de movimentações
   const [filtroData, setFiltroData] = useState<FiltroMovimentacoesData>('hoje');
   const [filtroTipo, setFiltroTipo] = useState<FiltroMovimentacoesTipo>('todos');
   const [dataInicio, setDataInicio] = useState(toISODateString(new Date()));
   const [dataFim, setDataFim] = useState(toISODateString(new Date()));
+
+  // Estados independentes para o filtro do ranking de clientes
+  const [clienteQuickFilter, setClienteQuickFilter] = useState<QuickFilterType>('mes_atual');
+  const [clienteDataInicio, setClienteDataInicio] = useState('');
+  const [clienteDataFim, setClienteDataFim] = useState('');
+
+  // Estados independentes para o filtro de produtividade dos vendedores
+  const [vendedorQuickFilter, setVendedorQuickFilter] = useState<QuickFilterType>('mes_atual');
+  const [vendedorDataInicio, setVendedorDataInicio] = useState('');
+  const [vendedorDataFim, setVendedorDataFim] = useState('');
+
+    // useEffect para atualizar as datas do ranking de clientes
+  useEffect(() => {
+    const hoje = new Date();
+    let inicio = new Date();
+    switch (clienteQuickFilter) {
+      case 'mes_atual':
+        inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        break;
+      case 'ultimos_30_dias':
+        inicio.setDate(hoje.getDate() - 30);
+        break;
+      case 'ano_atual':
+        inicio = new Date(hoje.getFullYear(), 0, 1);
+        break;
+    }
+    setClienteDataInicio(toISODateString(inicio));
+    setClienteDataFim(toISODateString(hoje));
+  }, [clienteQuickFilter]);
+
+  // useEffect para atualizar as datas da produtividade dos vendedores
+  useEffect(() => {
+    const hoje = new Date();
+    let inicio = new Date();
+    switch (vendedorQuickFilter) {
+      case 'mes_atual':
+        inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        break;
+      case 'ultimos_30_dias':
+        inicio.setDate(hoje.getDate() - 30);
+        break;
+      case 'ano_atual':
+        inicio = new Date(hoje.getFullYear(), 0, 1);
+        break;
+    }
+    setVendedorDataInicio(toISODateString(inicio));
+    setVendedorDataFim(toISODateString(hoje));
+  }, [vendedorQuickFilter]);
 
   // --- Hooks de busca de dados ---
   const { data: vendas, isLoading: isLoadingVendas, isError: isErrorVendas } = useMovimentacoes();
@@ -63,29 +117,22 @@ export default function Dashboard() {
     const now = new Date();
     let startDate = new Date();
     switch (periodoGrafico) {
-      case '6M':
-        startDate.setMonth(now.getMonth() - 6);
-        break;
-      case 'ANO':
-        startDate = new Date(now.getFullYear(), 0, 1);
-        break;
-      case '5A':
-        startDate.setFullYear(now.getFullYear() - 5);
-        break;
+      case '6M': startDate.setMonth(now.getMonth() - 6); break;
+      case 'ANO': startDate = new Date(now.getFullYear(), 0, 1); break;
+      case '5A': startDate.setFullYear(now.getFullYear() - 5); break;
     }
-    return {
-      reportStartDate: toISODateString(startDate),
-      reportEndDate: toISODateString(now),
-    };
+    return { reportStartDate: toISODateString(startDate), reportEndDate: toISODateString(now) };
   }, [periodoGrafico]);
 
   const { data: rankingClientes, isLoading: isLoadingRankingClientes } = useRankingClientes({
-    data_inicio: reportStartDate,
-    data_fim: reportEndDate,
+    data_inicio: clienteDataInicio,
+    data_fim: clienteDataFim,
+    enabled: !!clienteDataInicio && !!clienteDataFim,
   });
   const { data: produtividadeVendedores, isLoading: isLoadingProdutividade } = useSellerProductivity({
-    data_inicio: reportStartDate,
-    data_fim: reportEndDate,
+    data_inicio: vendedorDataInicio,
+    data_fim: vendedorDataFim,
+    enabled: !!vendedorDataInicio && !!vendedorDataFim,
   });
   const { data: rankingProdutos, isLoading: isLoadingRankingProdutos } = useRankingProdutos({
     data_inicio: reportStartDate,
@@ -132,9 +179,8 @@ export default function Dashboard() {
     const dadosGraficoPrincipal = Array.from(dataMap.entries()).map(([name, values]) => ({ name, ...values }));
 
     const dadosGraficoProdutos = rankingProdutos
-      ?.map(p => ({ name: p.produto_nome, Faturamento: parseFloat(p.faturamento_total), Peso: parseFloat(p.quantidade_vendida) || 0 })) // <--- CORREÇÃO APLICADA
+      ?.map(p => ({ name: p.produto_nome, Faturamento: parseFloat(p.faturamento_total), Peso: parseFloat(p.quantidade_vendida) || 0 }))
       .slice(0, 10) || [];
-
 
     const todasMovimentacoes = [
       ...vendas.map(v => ({ ...v, tipo: 'Entrada' as const, data: v.data_venda, valor: v.valor_total, descricao: v.produto_nome })),
@@ -201,8 +247,7 @@ export default function Dashboard() {
 
     return { kpis, dadosGraficoPrincipal, movimentacoesFiltradas, totalMovimentacoes, dadosGraficoProdutos, tituloGraficoProdutos, proximosVencimentos, top5Clientes, top5Vendedores };
   }, [vendas, despesas, periodoGrafico, filtroData, filtroTipo, dataInicio, dataFim, rankingClientes, produtividadeVendedores, rankingProdutos]);
-
-    // --- Funções de Manipulação de Eventos ---
+  // --- Funções de Manipulação de Eventos ---
   const handleBarClick = (data: any) => {
     if (data && data.activePayload && data.activePayload[0]) {
       const payload = data.activePayload[0].payload;
@@ -261,13 +306,7 @@ export default function Dashboard() {
     return (
       <div className="p-6 space-y-6">
         <Skeleton className="h-8 w-64" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5"><Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" /></div>
         <Skeleton className="h-48 w-full" />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2"><Skeleton className="h-80" /><Skeleton className="h-80" /></div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2"><Skeleton className="h-80" /><Skeleton className="h-80" /></div>
@@ -327,7 +366,20 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><Crown size={20} /> Top 5 Clientes</CardTitle><CardDescription>Clientes com maior faturamento no período.</CardDescription></CardHeader>
+          <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2"><Crown size={20} /> Top 5 Clientes</CardTitle>
+              <CardDescription>Clientes com maior faturamento.</CardDescription>
+            </div>
+            <Select value={clienteQuickFilter} onValueChange={(value) => setClienteQuickFilter(value as QuickFilterType)}>
+              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mes_atual">Este Mês</SelectItem>
+                <SelectItem value="ultimos_30_dias">Últimos 30 dias</SelectItem>
+                <SelectItem value="ano_atual">Este Ano</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardHeader>
           <CardContent className="pl-2">
             <ResponsiveContainer width="100%" height={350}>
               <BarChart data={top5Clientes} layout="vertical" margin={{ right: 40 }}>
@@ -343,7 +395,20 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><Users size={20} /> Top 5 Vendedores</CardTitle><CardDescription>Vendedores com maior volume de vendas no período.</CardDescription></CardHeader>
+          <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2"><Users size={20} /> Top 5 Vendedores</CardTitle>
+              <CardDescription>Vendedores com maior volume de vendas.</CardDescription>
+            </div>
+            <Select value={vendedorQuickFilter} onValueChange={(value) => setVendedorQuickFilter(value as QuickFilterType)}>
+              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mes_atual">Este Mês</SelectItem>
+                <SelectItem value="ultimos_30_dias">Últimos 30 dias</SelectItem>
+                <SelectItem value="ano_atual">Este Ano</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardHeader>
           <CardContent className="pl-2">
             <ResponsiveContainer width="100%" height={350}>
               <BarChart data={top5Vendedores} layout="vertical" margin={{ right: 40 }}>
