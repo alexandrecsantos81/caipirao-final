@@ -1,25 +1,30 @@
 // /frontend/src/hooks/useDespesas.ts
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   getDespesas, 
   createDespesa, 
-  updateDespesa, // Importado
-  deleteDespesa, // Importado
+  updateDespesa,
+  deleteDespesa,
   CreateDespesaPayload,
-  UpdateDespesaPayload  // Importado
+  UpdateDespesaPayload
 } from '../services/despesas.service';
 
 const DESPESAS_QUERY_KEY = 'despesas';
 
-// Hook para BUSCAR (sem alteração)
-export function useDespesas() {
+// ======================= INÍCIO DA CORREÇÃO =======================
+// Adicionamos um parâmetro opcional 'options' ao hook.
+export function useDespesas(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: [DESPESAS_QUERY_KEY],
     queryFn: getDespesas,
+    // A opção 'enabled' recebida é passada para a query.
+    // Se nenhuma opção for passada, 'enabled' será true por padrão.
+    enabled: options.enabled, 
   });
 }
+// ======================== FIM DA CORREÇÃO =========================
 
-// Hook para CRIAR (sem alteração)
 export function useCreateDespesa() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -30,7 +35,6 @@ export function useCreateDespesa() {
   });
 }
 
-// NOVO: Hook para ATUALIZAR uma despesa
 export function useUpdateDespesa() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -41,7 +45,6 @@ export function useUpdateDespesa() {
   });
 }
 
-// NOVO: Hook para DELETAR uma despesa
 export function useDeleteDespesa() {
   const queryClient = useQueryClient();
   return useMutation({

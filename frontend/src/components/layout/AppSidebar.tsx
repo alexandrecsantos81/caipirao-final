@@ -1,7 +1,7 @@
 // frontend/src/components/layout/AppSidebar.tsx
 
 import { NavLink } from 'react-router-dom';
-// 1. Importe o ícone 'UsersCog' para representar a gestão de usuários
+// 1. Importar os ícones necessários para os novos links
 import { Home, ShoppingCart, Users, Package, LineChart, LogOut, UserCircle, ShieldCheck, Briefcase, UserCog } from 'lucide-react'; 
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -9,19 +9,22 @@ import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { Drawer, DrawerContent } from '../ui/drawer';
 
-const navLinks = [
-  { to: "/", label: "Dashboard", icon: Home },
+// 2. DIVIDIR OS LINKS EM DUAS LISTAS: COMUM E ADMIN
+// Links que todos os usuários autenticados verão
+const commonLinks = [
   { to: "/movimentacoes", label: "Movimentações", icon: ShoppingCart },
   { to: "/clientes", label: "Clientes", icon: Users },
   { to: "/produtos", label: "Produtos", icon: Package },
-  { to: "/vendedores", label: "Vendedores", icon: Briefcase },
-  { to: "/relatorios", label: "Relatórios", icon: LineChart },
 ];
 
-// NOVO: Link para a página de usuários, que será adicionado condicionalmente
+// Links que APENAS administradores verão
 const adminLinks = [
+  { to: "/", label: "Dashboard", icon: Home },
+  { to: "/vendedores", label: "Vendedores", icon: Briefcase },
+  { to: "/relatorios", label: "Relatórios", icon: LineChart },
   { to: "/usuarios", label: "Usuários", icon: UserCog },
 ];
+
 interface AppSidebarProps {
   isCollapsed: boolean;
   isMobileNavOpen: boolean;
@@ -49,8 +52,35 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
 
       <nav className={cn("flex-1 overflow-y-auto py-2", isCollapsed ? "px-2" : "px-2 lg:px-4")}>
         <ul className="space-y-1">
-          {/* Renderiza os links de navegação padrão */}
-          {navLinks.map((link) => (
+          {/* 3. RENDERIZAÇÃO CONDICIONAL DOS LINKS DE ADMIN */}
+          {user?.perfil === 'ADMIN' && (
+            <>
+              {adminLinks.map((link) => (
+                <li key={link.to}>
+                  <NavLink
+                    to={link.to}
+                    end={link.to === "/"} // Garante que 'Dashboard' só fica ativo na raiz
+                    onClick={onLinkClick}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 rounded-lg py-2 text-muted-foreground transition-all hover:text-primary",
+                        isCollapsed ? "px-3 justify-center" : "px-3",
+                        isActive && "bg-muted text-primary"
+                      )
+                    }
+                  >
+                    <link.icon className="h-5 w-5" />
+                    {!isCollapsed && <span className="truncate">{link.label}</span>}
+                  </NavLink>
+                </li>
+              ))}
+              {/* Adiciona um separador visual */}
+              {!isCollapsed && <li className="px-3 py-2 text-xs font-semibold text-muted-foreground/80 tracking-wider uppercase">Geral</li>}
+            </>
+          )}
+
+          {/* Renderiza os links comuns para todos os usuários */}
+          {commonLinks.map((link) => (
             <li key={link.to}>
               <NavLink
                 to={link.to}
@@ -69,37 +99,6 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
               </NavLink>
             </li>
           ))}
-
-          {/* 2. Renderiza os links de admin APENAS se o perfil for 'ADMIN' */}
-          {user?.perfil === 'ADMIN' && (
-            <>
-              {/* Adiciona um separador visual para a seção de administração */}
-              {!isCollapsed && (
-                <li className="px-3 py-2 text-xs font-semibold text-muted-foreground/80 tracking-wider uppercase">
-                  Admin
-                </li>
-              )}
-              {adminLinks.map((link) => (
-                <li key={link.to}>
-                  <NavLink
-                    to={link.to}
-                    end
-                    onClick={onLinkClick}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-3 rounded-lg py-2 text-muted-foreground transition-all hover:text-primary",
-                        isCollapsed ? "px-3 justify-center" : "px-3",
-                        isActive && "bg-muted text-primary"
-                      )
-                    }
-                  >
-                    <link.icon className="h-5 w-5" />
-                    {!isCollapsed && <span className="truncate">{link.label}</span>}
-                  </NavLink>
-                </li>
-              ))}
-            </>
-          )}
         </ul>
       </nav>
 
@@ -138,10 +137,9 @@ const SidebarContent = ({ isCollapsed, onLinkClick }: { isCollapsed: boolean, on
 
 // O componente principal exportado permanece o mesmo
 export default function AppSidebar({ isCollapsed, isMobileNavOpen, setIsMobileNavOpen }: AppSidebarProps) {
-  // ... (código existente sem alterações)
   return (
     <>
-      {/* Sidebar para Desktop (visível em telas médias e maiores) */}
+      {/* Sidebar para Desktop */}
       <aside
         className={cn(
           "hidden md:flex flex-col border-r transition-all duration-300 ease-in-out",
@@ -151,7 +149,7 @@ export default function AppSidebar({ isCollapsed, isMobileNavOpen, setIsMobileNa
         <SidebarContent isCollapsed={isCollapsed} />
       </aside>
 
-      {/* Drawer para Mobile (visível em telas pequenas) */}
+      {/* Drawer para Mobile */}
       <div className="md:hidden">
         <Drawer open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
           <DrawerContent className="border-r h-full w-[280px] mt-0 rounded-none">

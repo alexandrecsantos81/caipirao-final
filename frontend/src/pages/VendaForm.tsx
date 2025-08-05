@@ -1,3 +1,5 @@
+// frontend/src/pages/VendaForm.tsx
+
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -7,13 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useClientes } from "@/hooks/useClientes";
 import { useProdutos } from "@/hooks/useProdutos";
 import { useUsers } from "@/hooks/useUsers";
+// 1. IMPORTAR O HOOK useAuth
+import { useAuth } from "@/contexts/AuthContext";
 
 export const vendaFormSchema = z.object({
   cliente_id: z.string().min(1, "Selecione um cliente."),
   produto_id: z.string().min(1, "Selecione um produto."),
   data_venda: z.string().min(1, "A data da venda é obrigatória."),
   data_vencimento: z.string().optional(),
-  // O nome do campo continua 'peso_produto' para consistência com o backend, mas o label mudará
   peso_produto: z.string().optional(),
   preco_manual: z.string().optional(),
   valor_total: z.string().min(1, "O valor total é obrigatório e deve ser maior que zero."),
@@ -30,35 +33,29 @@ interface VendaFormProps {
 }
 
 export default function VendaForm({ onSubmit, isSubmitting, formInstance: form }: VendaFormProps) {
+  // 2. OBTER O USUÁRIO LOGADO
+  const { user } = useAuth();
+
   const { data: clientes } = useClientes();
   const { data: produtos } = useProdutos();
   const { data: usuarios } = useUsers();
 
-  // 1. Observar o ID do produto selecionado
   const produtoIdSelecionado = form.watch("produto_id");
-
-  // 2. Encontrar o produto completo na lista de produtos
   const produtoSelecionado = produtos?.find(p => String(p.id) === produtoIdSelecionado);
 
-  // 3. Definir o label dinâmico com base na unidade de medida do produto
   const getQuantidadeLabel = () => {
     if (!produtoSelecionado) return "Quantidade/Peso";
     switch (produtoSelecionado.unidade_medida) {
-      case 'kg':
-        return "Peso (kg)";
-      case 'un':
-        return "Quantidade (un)";
-      case 'dz':
-        return "Quantidade (dúzias)";
-      default:
-        return `Quantidade (${produtoSelecionado.unidade_medida})`;
+      case 'kg': return "Peso (kg)";
+      case 'un': return "Quantidade (un)";
+      default: return `Quantidade (${produtoSelecionado.unidade_medida})`;
     }
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-1">
-        {/* Cliente e Produto (sem alterações) */}
+        {/* Campos Cliente e Produto (sem alterações) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField control={form.control} name="cliente_id" render={({ field }) => (
             <FormItem>
@@ -92,7 +89,7 @@ export default function VendaForm({ onSubmit, isSubmitting, formInstance: form }
           )} />
         </div>
 
-        {/* 4. Campo de quantidade/peso com o label dinâmico */}
+        {/* Campos Quantidade e Preço Manual (sem alterações) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField control={form.control} name="peso_produto" render={({ field }) => (
             <FormItem>
@@ -110,7 +107,6 @@ export default function VendaForm({ onSubmit, isSubmitting, formInstance: form }
           )} />
         </div>
         
-        {/* Restante do formulário (sem alterações) */}
         <FormField control={form.control} name="valor_total" render={({ field }) => (
           <FormItem><FormLabel>Valor Total da Venda (R$)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Calculado automaticamente" {...field} readOnly /></FormControl><FormMessage /></FormItem>
         )} />
@@ -122,9 +118,23 @@ export default function VendaForm({ onSubmit, isSubmitting, formInstance: form }
           <FormField control={form.control} name="data_vencimento" render={({ field }) => (
             <FormItem><FormLabel>Data de Vencimento</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
-          <FormField control={form.control} name="data_pagamento" render={({ field }) => (
-            <FormItem><FormLabel>Data do Pagamento</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-          )} />
+          
+          {/* ======================= INÍCIO DA ALTERAÇÃO ======================= */}
+          <FormField
+            control={form.control}
+            name="data_pagamento"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Data do Pagamento</FormLabel>
+                <FormControl>
+                  {/* 3. A propriedade 'disabled' é ativada se o perfil NÃO for ADMIN */}
+                  <Input type="date" {...field} disabled={user?.perfil !== 'ADMIN'} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          {/* ======================== FIM DA ALTERAÇÃO ========================= */}
         </div>
 
         <FormField
@@ -140,9 +150,9 @@ export default function VendaForm({ onSubmit, isSubmitting, formInstance: form }
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {usuarios?.map(user => (
-                    <SelectItem key={user.id} value={String(user.id)}>
-                      {user.nickname || user.email}
+                  {usuarios?.map(u => (
+                    <SelectItem key={u.id} value={String(u.id)}>
+                      {u.nickname || u.email}
                     </SelectItem>
                   ))}
                 </SelectContent>

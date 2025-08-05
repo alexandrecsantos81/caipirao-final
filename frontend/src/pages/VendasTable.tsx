@@ -1,3 +1,5 @@
+// frontend/src/pages/VendasTable.tsx
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +10,8 @@ interface VendasTableProps {
   vendas: Venda[];
   onEdit: (venda: Venda) => void;
   onDelete: (id: number) => void;
+  // 1. ADICIONAR userProfile ÀS PROPS
+  userProfile?: 'ADMIN' | 'USER';
 }
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -15,10 +19,10 @@ const formatDate = (dateString: string | null) => dateString ? new Date(dateStri
 const formatQuantity = (value: number | null, unit: string | null) => {
   if (value === null) return 'N/A';
   const formattedValue = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 }).format(value);
-  return `${formattedValue} ${unit || ''}`; // Adiciona a unidade de medida
+  return `${formattedValue} ${unit || ''}`;
 };
 
-export default function VendasTable({ vendas, onEdit, onDelete }: VendasTableProps) {
+export default function VendasTable({ vendas, onEdit, onDelete, userProfile }: VendasTableProps) {
   return (
     <div className="rounded-lg border shadow-sm overflow-x-auto">
       <Table>
@@ -29,7 +33,6 @@ export default function VendasTable({ vendas, onEdit, onDelete }: VendasTablePro
             <TableHead>Produto</TableHead>
             <TableHead>Vendedor</TableHead>
             <TableHead>Status</TableHead>
-            {/* 1. Mover a coluna Quantidade para depois de Status */}
             <TableHead className="text-center">Quantidade</TableHead>
             <TableHead className="text-right">Valor Total</TableHead>
             <TableHead className="text-center w-[180px]">Ações</TableHead>
@@ -57,7 +60,6 @@ export default function VendasTable({ vendas, onEdit, onDelete }: VendasTablePro
                   <Badge variant="destructive">Pendente</Badge>
                 )}
               </TableCell>
-              {/* 2. Mover a célula Quantidade e centralizar o conteúdo */}
               <TableCell className="text-center font-medium">
                 {formatQuantity(venda.peso, venda.unidade_medida)}
               </TableCell>
@@ -65,8 +67,13 @@ export default function VendasTable({ vendas, onEdit, onDelete }: VendasTablePro
                 {formatCurrency(venda.valor_total)}
               </TableCell>
               <TableCell className="text-center space-x-2">
+                {/* O botão Editar continua visível para todos */}
                 <Button variant="outline" size="sm" onClick={() => onEdit(venda)}>Editar</Button>
-                <Button variant="destructive" size="sm" onClick={() => onDelete(venda.id)}>Deletar</Button>
+                
+                {/* 2. RENDERIZAÇÃO CONDICIONAL DO BOTÃO DELETAR */}
+                {userProfile === 'ADMIN' && (
+                  <Button variant="destructive" size="sm" onClick={() => onDelete(venda.id)}>Deletar</Button>
+                )}
               </TableCell>
             </TableRow>
           ))}

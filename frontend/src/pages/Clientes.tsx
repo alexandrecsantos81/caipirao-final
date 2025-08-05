@@ -8,8 +8,8 @@ import InputMask from 'react-input-mask';
 import { toast } from 'sonner';
 
 import { useClientes, useCreateCliente, useUpdateCliente, useDeleteCliente } from '@/hooks/useClientes';
-import { Cliente, CreateClientePayload } from '@/services/clientes.service';
-import { formatWhatsAppLink } from '@/lib/utils';
+import { Cliente, CreateClientePayload, UpdateClientePayload } from '@/services/clientes.service';
+import { formatWhatsAppLink, formatPhone } from '@/lib/utils';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge'; // 1. IMPORTAR O BADGE
+import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Terminal, Phone } from 'lucide-react';
 
 const formSchema = z.object({
@@ -44,18 +44,6 @@ const formSchema = z.object({
 });
 
 type ClienteFormValues = z.infer<typeof formSchema>;
-
-const formatPhone = (phone: string | null | undefined): string => {
-  if (!phone) return 'N/A';
-  const cleaned = phone.replace(/\D/g, '');
-  if (cleaned.length === 11) {
-    return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 7)}-${cleaned.substring(7)}`;
-  }
-  if (cleaned.length === 10) {
-    return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 6)}-${cleaned.substring(6)}`;
-  }
-  return phone;
-};
 
 export default function Clientes() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -85,7 +73,7 @@ export default function Clientes() {
   const { formState: { isSubmitting } } = form;
 
   const onSubmit = (data: ClienteFormValues) => {
-    const payload: CreateClientePayload = {
+    const payload: CreateClientePayload | UpdateClientePayload = {
         nome: data.nome,
         contato: data.contato.replace(/\D/g, ''),
         nome_responsavel: data.nome_responsavel || undefined,
@@ -113,7 +101,7 @@ export default function Clientes() {
         onError: (err) => handleError('atualizar', err),
       });
     } else {
-      createClienteMutation.mutate(payload, {
+      createClienteMutation.mutate(payload as CreateClientePayload, {
         onSuccess: () => handleSuccess('criado'),
         onError: (err) => handleError('criar', err),
       });
@@ -173,7 +161,7 @@ export default function Clientes() {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Nome</TableHead>
-                        <TableHead>Status</TableHead> {/* 2. ADICIONAR COLUNA NO CABEÇALHO */}
+                        <TableHead>Status</TableHead>
                         <TableHead>Contato</TableHead>
                         <TableHead>Endereço Principal</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
@@ -183,7 +171,6 @@ export default function Clientes() {
                     {clientes?.map((cliente) => (
                         <TableRow key={cliente.id}>
                             <TableCell className="font-medium">{cliente.nome}</TableCell>
-                            {/* 3. ADICIONAR CÉLULA COM O BADGE DE STATUS */}
                             <TableCell>
                                 <Badge variant={cliente.status === 'Ativo' ? 'default' : 'destructive'}>
                                     {cliente.status}
@@ -233,37 +220,41 @@ export default function Clientes() {
 
       <Drawer open={isDrawerOpen} onOpenChange={handleDrawerOpenChange}>
         <DrawerContent>
-          <div className="mx-auto w-full max-w-4xl p-4">
+          {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
+          <div className="mx-auto w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <DrawerHeader>
               <DrawerTitle>{clienteParaEditar ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</DrawerTitle>
               <DrawerDescription>Preencha os campos abaixo para salvar as informações do cliente.</DrawerDescription>
             </DrawerHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                  <FormField control={form.control} name="nome" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>Nome</FormLabel><FormControl><Input placeholder="Nome completo do cliente" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="nome_responsavel" render={({ field }) => (<FormItem><FormLabel>Responsável (Opcional)</FormLabel><FormControl><Input placeholder="Nome do responsável" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="contato" render={({ field }) => (<FormItem><FormLabel>Telefone</FormLabel><FormControl><InputMask mask="(99) 99999-9999" value={field.value} onChange={field.onChange} onBlur={field.onBlur}>{(inputProps: any) => <Input {...inputProps} placeholder="(xx) xxxxx-xxxx" />}</InputMask></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="telefone_whatsapp" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-2 pb-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="!mt-0 font-normal">É WhatsApp?</FormLabel></FormItem>)} />
-                </div>
-                <h3 className="font-semibold text-lg border-t pt-4">Endereço</h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <FormField control={form.control} name="logradouro" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>Logradouro</FormLabel><FormControl><Input placeholder="Rua, Avenida, etc." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="quadra" render={({ field }) => (<FormItem><FormLabel>Quadra</FormLabel><FormControl><Input placeholder="Qd. 123" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="lote" render={({ field }) => (<FormItem><FormLabel>Lote</FormLabel><FormControl><Input placeholder="Lt. 45" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormField control={form.control} name="bairro" render={({ field }) => (<FormItem><FormLabel>Bairro</FormLabel><FormControl><Input placeholder="Nome do bairro" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="cep" render={({ field }) => (<FormItem><FormLabel>CEP</FormLabel><FormControl><InputMask mask="99999-999" value={field.value ?? ''} onChange={field.onChange} onBlur={field.onBlur}>{(inputProps: any) => <Input {...inputProps} placeholder="_____-___" />}</InputMask></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="ponto_referencia" render={({ field }) => (<FormItem><FormLabel>Ponto de Referência</FormLabel><FormControl><Input placeholder="Próximo a..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                </div>
-                <DrawerFooter className="flex-row gap-2 px-0 pt-6">
-                  <Button type="submit" disabled={isSubmitting} className="flex-1">Salvar Cliente</Button>
-                  <DrawerClose asChild><Button type="button" variant="outline" className="flex-1">Cancelar</Button></DrawerClose>
-                </DrawerFooter>
-              </form>
-            </Form>
+            <div className="p-4">
+                <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <FormField control={form.control} name="nome" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>Nome</FormLabel><FormControl><Input placeholder="Nome completo do cliente" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="nome_responsavel" render={({ field }) => (<FormItem><FormLabel>Responsável (Opcional)</FormLabel><FormControl><Input placeholder="Nome do responsável" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="contato" render={({ field }) => (<FormItem><FormLabel>Telefone</FormLabel><FormControl><InputMask mask="(99) 99999-9999" value={field.value} onChange={field.onChange} onBlur={field.onBlur}>{(inputProps: any) => <Input {...inputProps} placeholder="(xx) xxxxx-xxxx" />}</InputMask></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="telefone_whatsapp" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-2 pb-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="!mt-0 font-normal">É WhatsApp?</FormLabel></FormItem>)} />
+                    </div>
+                    <h3 className="font-semibold text-lg border-t pt-4">Endereço</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <FormField control={form.control} name="logradouro" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>Logradouro</FormLabel><FormControl><Input placeholder="Rua, Avenida, etc." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="quadra" render={({ field }) => (<FormItem><FormLabel>Quadra</FormLabel><FormControl><Input placeholder="Qd. 123" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="lote" render={({ field }) => (<FormItem><FormLabel>Lote</FormLabel><FormControl><Input placeholder="Lt. 45" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField control={form.control} name="bairro" render={({ field }) => (<FormItem><FormLabel>Bairro</FormLabel><FormControl><Input placeholder="Nome do bairro" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="cep" render={({ field }) => (<FormItem><FormLabel>CEP</FormLabel><FormControl><InputMask mask="99999-999" value={field.value ?? ''} onChange={field.onChange} onBlur={field.onBlur}>{(inputProps: any) => <Input {...inputProps} placeholder="_____-___" />}</InputMask></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="ponto_referencia" render={({ field }) => (<FormItem><FormLabel>Ponto de Referência</FormLabel><FormControl><Input placeholder="Próximo a..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                    </div>
+                    <DrawerFooter className="flex-row gap-2 px-0 pt-6">
+                    <Button type="submit" disabled={isSubmitting} className="flex-1">Salvar Cliente</Button>
+                    <DrawerClose asChild><Button type="button" variant="outline" className="flex-1">Cancelar</Button></DrawerClose>
+                    </DrawerFooter>
+                </form>
+                </Form>
+            </div>
           </div>
+          {/* ======================== FIM DA CORREÇÃO ========================= */}
         </DrawerContent>
       </Drawer>
     </div>

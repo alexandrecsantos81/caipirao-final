@@ -1,14 +1,14 @@
 // frontend/src/components/LayoutPrincipal.tsx
 
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom'; // 1. IMPORTAR O OUTLET
+// import { Outlet } from 'react-router-dom'; // <-- REMOVER ESTA LINHA
 import { useTheme } from '@/contexts/ThemeProvider';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Moon, Sun, PanelLeftClose, PanelLeftOpen, Menu } from 'lucide-react';
 import AppSidebar from '@/components/layout/AppSidebar';
 
-// 2. ADICIONAR A PROP 'children'
+// O componente agora espera 'children' para renderizar o conteúdo da rota
 export default function LayoutPrincipal({ children }: { children: React.ReactNode }) {
   const { setTheme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -24,7 +24,6 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex h-14 shrink-0 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-          {/* ... (código do header permanece o mesmo) ... */}
           <Button
             variant="outline"
             size="icon"
@@ -67,7 +66,7 @@ export default function LayoutPrincipal({ children }: { children: React.ReactNod
         </header>
         
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          {/* 3. RENDERIZAR OS FILHOS AQUI */}
+          {/* O conteúdo da rota filha é renderizado aqui */}
           {children}
         </main>
       </div>
