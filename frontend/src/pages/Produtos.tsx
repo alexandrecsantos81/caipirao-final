@@ -1,7 +1,6 @@
-// frontend/src/pages/Produtos.tsx
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerDescription } from "@/components/ui/drawer";
@@ -9,11 +8,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, PlusCircle } from "lucide-react";
 
-// Hooks, tipos e componentes
 import { useProdutos, useCreateProduto, useUpdateProduto, useDeleteProduto } from "@/hooks/useProdutos";
 import { Produto, CreateProdutoPayload, UpdateProdutoPayload } from '@/services/produtos.service';
 import ProdutosTable from "./ProdutosTable";
-import ProdutoForm, { ProdutoFormValues } from "./ProdutoForm";
+import ProdutoForm, { ProdutoFormValues, formSchema } from "./ProdutoForm";
+
+// Definindo o tipo para as unidades de medida válidas no formulário
+type ValidUnit = 'kg' | 'un';
 
 export default function Produtos() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -24,20 +25,25 @@ export default function Produtos() {
   const updateProdutoMutation = useUpdateProduto();
   const deleteProdutoMutation = useDeleteProduto();
 
-  const form = useForm<ProdutoFormValues>();
+  const form = useForm<ProdutoFormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      nome: '',
+      unidade_medida: 'kg',
+      preco: '',
+    },
+  });
 
   const handleSubmit = (values: ProdutoFormValues) => {
     const payload: CreateProdutoPayload | UpdateProdutoPayload = {
       nome: values.nome,
       preco: parseFloat(values.preco.replace(',', '.')),
-      descricao: values.descricao || null,
+      unidade_medida: values.unidade_medida,
     };
 
     const handleSuccess = (action: string) => {
       toast.success(`Produto ${action} com sucesso!`);
       setIsDrawerOpen(false);
-      setProdutoParaEditar(null);
-      form.reset();
     };
 
     const handleError = (action: string, err: any) => {
@@ -59,11 +65,21 @@ export default function Produtos() {
 
   const handleEdit = (produto: Produto) => {
     setProdutoParaEditar(produto);
+    
+    // ======================= INÍCIO DA CORREÇÃO =======================
+    // Verificamos se a unidade de medida do produto é uma das válidas.
+    // Se não for, usamos 'un' como padrão para evitar o erro de tipo.
+    const unidadeValida = ['kg', 'un'].includes(produto.unidade_medida || '') 
+      ? produto.unidade_medida as ValidUnit 
+      : 'un'; // Padrão caso o valor seja inválido ou nulo
+
     form.reset({
       nome: produto.nome,
-      descricao: produto.descricao || '',
+      unidade_medida: unidadeValida,
       preco: String(produto.preco),
     });
+    // ======================== FIM DA CORREÇÃO =========================
+
     setIsDrawerOpen(true);
   };
 
@@ -79,7 +95,7 @@ export default function Produtos() {
   const handleDrawerOpenChange = (open: boolean) => {
     if (!open) {
       setProdutoParaEditar(null);
-      form.reset({ nome: '', descricao: '', preco: '' });
+      form.reset({ nome: '', unidade_medida: 'kg', preco: '' });
     }
     setIsDrawerOpen(open);
   };
@@ -101,11 +117,10 @@ export default function Produtos() {
 
   return (
     <div className="p-6">
-      {/* CORREÇÃO APLICADA AQUI */}
       <div className="flex flex-col items-start gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Produtos</h1>
-          <p className="mt-2 text-gray-600">Gerencie seus produtos, descrições e preços.</p>
+          <p className="mt-2 text-gray-600">Gerencie seus produtos, preços e unidades de medida.</p>
         </div>
         <Drawer open={isDrawerOpen} onOpenChange={handleDrawerOpenChange}>
           <DrawerTrigger asChild>
@@ -116,7 +131,7 @@ export default function Produtos() {
               <DrawerHeader className="text-left">
                 <DrawerTitle>{produtoParaEditar ? 'Editar Produto' : 'Cadastrar Novo Produto'}</DrawerTitle>
                 <DrawerDescription>
-                  {produtoParaEditar ? 'Altere os detalhes abaixo para atualizar o produto.' : 'Preencha os detalhes abaixo para adicionar um novo produto.'}
+                  Preencha os detalhes abaixo para salvar o produto.
                 </DrawerDescription>
               </DrawerHeader>
               <ProdutoForm

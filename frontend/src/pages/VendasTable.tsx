@@ -1,4 +1,3 @@
-// frontend/src/pages/VendasTable.tsx
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +12,11 @@ interface VendasTableProps {
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 const formatDate = (dateString: string | null) => dateString ? new Date(dateString).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A';
+const formatQuantity = (value: number | null, unit: string | null) => {
+  if (value === null) return 'N/A';
+  const formattedValue = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 }).format(value);
+  return `${formattedValue} ${unit || ''}`; // Adiciona a unidade de medida
+};
 
 export default function VendasTable({ vendas, onEdit, onDelete }: VendasTableProps) {
   return (
@@ -25,6 +29,8 @@ export default function VendasTable({ vendas, onEdit, onDelete }: VendasTablePro
             <TableHead>Produto</TableHead>
             <TableHead>Vendedor</TableHead>
             <TableHead>Status</TableHead>
+            {/* 1. Mover a coluna Quantidade para depois de Status */}
+            <TableHead className="text-center">Quantidade</TableHead>
             <TableHead className="text-right">Valor Total</TableHead>
             <TableHead className="text-center w-[180px]">Ações</TableHead>
           </TableRow>
@@ -38,7 +44,6 @@ export default function VendasTable({ vendas, onEdit, onDelete }: VendasTablePro
               <TableCell>
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-muted-foreground" />
-                  {/* CORREÇÃO: Usar o novo campo 'responsavel_venda_nome' */}
                   <span className="truncate">{venda.responsavel_venda_nome || 'N/A'}</span>
                 </div>
               </TableCell>
@@ -51,6 +56,10 @@ export default function VendasTable({ vendas, onEdit, onDelete }: VendasTablePro
                 ) : (
                   <Badge variant="destructive">Pendente</Badge>
                 )}
+              </TableCell>
+              {/* 2. Mover a célula Quantidade e centralizar o conteúdo */}
+              <TableCell className="text-center font-medium">
+                {formatQuantity(venda.peso, venda.unidade_medida)}
               </TableCell>
               <TableCell className="text-right font-semibold text-green-600">
                 {formatCurrency(venda.valor_total)}

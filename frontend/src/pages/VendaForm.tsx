@@ -1,5 +1,3 @@
-// /frontend/src/pages/VendaForm.tsx
-
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -8,19 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useClientes } from "@/hooks/useClientes";
 import { useProdutos } from "@/hooks/useProdutos";
-import { useUsers } from "@/hooks/useUsers"; // 1. Importar o hook para buscar usuários
+import { useUsers } from "@/hooks/useUsers";
 
-// 2. Atualizar o schema de validação
 export const vendaFormSchema = z.object({
   cliente_id: z.string().min(1, "Selecione um cliente."),
   produto_id: z.string().min(1, "Selecione um produto."),
   data_venda: z.string().min(1, "A data da venda é obrigatória."),
   data_vencimento: z.string().optional(),
+  // O nome do campo continua 'peso_produto' para consistência com o backend, mas o label mudará
   peso_produto: z.string().optional(),
   preco_manual: z.string().optional(),
   valor_total: z.string().min(1, "O valor total é obrigatório e deve ser maior que zero."),
   data_pagamento: z.string().optional(),
-  // O campo agora é 'responsavel_venda_id' e é obrigatório
   responsavel_venda_id: z.string().min(1, "O vendedor responsável é obrigatório."),
 });
 
@@ -35,7 +32,28 @@ interface VendaFormProps {
 export default function VendaForm({ onSubmit, isSubmitting, formInstance: form }: VendaFormProps) {
   const { data: clientes } = useClientes();
   const { data: produtos } = useProdutos();
-  const { data: usuarios } = useUsers(); // 3. Buscar a lista de usuários
+  const { data: usuarios } = useUsers();
+
+  // 1. Observar o ID do produto selecionado
+  const produtoIdSelecionado = form.watch("produto_id");
+
+  // 2. Encontrar o produto completo na lista de produtos
+  const produtoSelecionado = produtos?.find(p => String(p.id) === produtoIdSelecionado);
+
+  // 3. Definir o label dinâmico com base na unidade de medida do produto
+  const getQuantidadeLabel = () => {
+    if (!produtoSelecionado) return "Quantidade/Peso";
+    switch (produtoSelecionado.unidade_medida) {
+      case 'kg':
+        return "Peso (kg)";
+      case 'un':
+        return "Quantidade (un)";
+      case 'dz':
+        return "Quantidade (dúzias)";
+      default:
+        return `Quantidade (${produtoSelecionado.unidade_medida})`;
+    }
+  };
 
   return (
     <Form {...form}>
@@ -63,7 +81,7 @@ export default function VendaForm({ onSubmit, isSubmitting, formInstance: form }
                     const precoFormatado = !isNaN(precoNumerico) ? precoNumerico.toFixed(2).replace('.', ',') : 'Preço inválido';
                     return (
                       <SelectItem key={p.id} value={String(p.id)}>
-                        {p.nome} (R$ {precoFormatado}/kg)
+                        {p.nome} (R$ {precoFormatado}/{p.unidade_medida})
                       </SelectItem>
                     );
                   })}
@@ -74,20 +92,29 @@ export default function VendaForm({ onSubmit, isSubmitting, formInstance: form }
           )} />
         </div>
 
-        {/* Peso, Preço Manual e Valor Total (sem alterações) */}
+        {/* 4. Campo de quantidade/peso com o label dinâmico */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField control={form.control} name="peso_produto" render={({ field }) => (
-            <FormItem><FormLabel>Peso do Produto (kg)</FormLabel><FormControl><Input type="number" step="0.001" placeholder="Ex: 1.500" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem>
+              <FormLabel>{getQuantidadeLabel()}</FormLabel>
+              <FormControl><Input type="number" step="0.001" placeholder="Ex: 1.500" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
           )} />
           <FormField control={form.control} name="preco_manual" render={({ field }) => (
-            <FormItem><FormLabel>Preço Manual por Kg (Opcional)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Deixe em branco para usar o padrão" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem>
+              <FormLabel>Preço Manual (Opcional)</FormLabel>
+              <FormControl><Input type="number" step="0.01" placeholder="Usar preço do cadastro" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
           )} />
         </div>
+        
+        {/* Restante do formulário (sem alterações) */}
         <FormField control={form.control} name="valor_total" render={({ field }) => (
           <FormItem><FormLabel>Valor Total da Venda (R$)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Calculado automaticamente" {...field} readOnly /></FormControl><FormMessage /></FormItem>
         )} />
 
-        {/* Datas (sem alterações) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField control={form.control} name="data_venda" render={({ field }) => (
             <FormItem><FormLabel>Data da Venda</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
@@ -100,7 +127,6 @@ export default function VendaForm({ onSubmit, isSubmitting, formInstance: form }
           )} />
         </div>
 
-        {/* 4. Campo "Responsável pela Venda" MODIFICADO para Select */}
         <FormField
           control={form.control}
           name="responsavel_venda_id"
@@ -114,7 +140,6 @@ export default function VendaForm({ onSubmit, isSubmitting, formInstance: form }
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {/* Popula o dropdown com os usuários */}
                   {usuarios?.map(user => (
                     <SelectItem key={user.id} value={String(user.id)}>
                       {user.nickname || user.email}

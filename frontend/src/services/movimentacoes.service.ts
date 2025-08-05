@@ -17,6 +17,7 @@ export interface Venda {
   preco_manual: number | null;
   responsavel_venda_id: number | null;
   responsavel_venda_nome: string | null; // Recebe o nickname ou email do vendedor
+  unidade_medida: 'kg' | 'un' | null;
 }
 
 /**

@@ -1,5 +1,3 @@
-// frontend/src/pages/Movimentacoes.tsx
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,7 +15,7 @@ import { CreateMovimentacaoPayload, Venda } from '@/services/movimentacoes.servi
 import VendaForm, { VendaFormValues, vendaFormSchema } from './VendaForm';
 import VendasTable from './VendasTable';
 import { useDespesas, useCreateDespesa, useUpdateDespesa, useDeleteDespesa } from '@/hooks/useDespesas';
-import { Despesa, CreateDespesaPayload, UpdateDespesaPayload } from '@/services/despesas.service';
+import { Despesa, CreateDespesaPayload as CreateDespesaPayloadType, UpdateDespesaPayload } from '@/services/despesas.service';
 import DespesaForm, { DespesaFormValues, formSchema as despesaFormSchema } from './DespesaForm';
 import DespesasTable from './DespesasTable';
 import { useProdutos } from '@/hooks/useProdutos';
@@ -44,42 +42,63 @@ export default function Movimentacoes() {
   const vendaForm = useForm<VendaFormValues>({ resolver: zodResolver(vendaFormSchema) });
   const despesaForm = useForm<DespesaFormValues>({ resolver: zodResolver(despesaFormSchema) });
 
-  // Efeito para preencher o formulário de venda ao abrir o drawer
   useEffect(() => {
-    if (!isDrawerOpen || activeTab !== 'vendas') return;
+    if (!isDrawerOpen) return;
 
-    if (vendaParaEditar) {
-      const produto = produtos?.find(p => p.nome === vendaParaEditar.produto_nome);
-      vendaForm.reset({
-        cliente_id: String(vendaParaEditar.cliente_id),
-        produto_id: produto ? String(produto.id) : "",
-        data_venda: vendaParaEditar.data_venda.split('T')[0],
-        data_vencimento: vendaParaEditar.data_vencimento?.split('T')[0] || '',
-        peso_produto: String(vendaParaEditar.peso || ''),
-        preco_manual: String(vendaParaEditar.preco_manual || ''),
-        valor_total: String(vendaParaEditar.valor_total || ''),
-        data_pagamento: vendaParaEditar.data_pagamento?.split('T')[0] || '',
-        // ======================= INÍCIO DA CORREÇÃO =======================
-        // O campo no formulário é 'responsavel_venda_id', e o valor vem do objeto 'vendaParaEditar'.
-        responsavel_venda_id: String(vendaParaEditar.responsavel_venda_id || ''),
-        // ======================== FIM DA CORREÇÃO =========================
-      });
-    } else {
-      vendaForm.reset({
-        cliente_id: "",
-        produto_id: "",
-        data_venda: new Date().toISOString().split('T')[0],
-        data_vencimento: "",
-        peso_produto: "",
-        preco_manual: "",
-        valor_total: "",
-        data_pagamento: "",
-        responsavel_venda_id: "", // Limpa o campo
-      });
+    if (activeTab === 'vendas') {
+      if (vendaParaEditar) {
+        const produto = produtos?.find(p => p.nome === vendaParaEditar.produto_nome);
+        vendaForm.reset({
+          cliente_id: String(vendaParaEditar.cliente_id),
+          produto_id: produto ? String(produto.id) : "",
+          data_venda: vendaParaEditar.data_venda.split('T')[0],
+          data_vencimento: vendaParaEditar.data_vencimento?.split('T')[0] || '',
+          peso_produto: String(vendaParaEditar.peso || ''),
+          preco_manual: String(vendaParaEditar.preco_manual || ''),
+          valor_total: String(vendaParaEditar.valor_total || ''),
+          data_pagamento: vendaParaEditar.data_pagamento?.split('T')[0] || '',
+          responsavel_venda_id: String(vendaParaEditar.responsavel_venda_id || ''),
+        });
+      } else {
+        vendaForm.reset({
+          cliente_id: "",
+          produto_id: "",
+          data_venda: new Date().toISOString().split('T')[0],
+          data_vencimento: "",
+          peso_produto: "",
+          preco_manual: "",
+          valor_total: "",
+          data_pagamento: "",
+          responsavel_venda_id: "",
+        });
+      }
+    } else if (activeTab === 'despesas') {
+        if (despesaParaEditar) {
+            despesaForm.reset({
+                ...despesaParaEditar,
+                valor: String(despesaParaEditar.valor),
+                discriminacao: despesaParaEditar.discriminacao || '',
+                nome_recebedor: despesaParaEditar.nome_recebedor || '',
+                data_pagamento: despesaParaEditar.data_pagamento?.split('T')[0] || '',
+                data_vencimento: despesaParaEditar.data_vencimento?.split('T')[0] || '',
+                forma_pagamento: despesaParaEditar.forma_pagamento || '',
+                responsavel_pagamento: despesaParaEditar.responsavel_pagamento || '',
+            });
+        } else {
+            despesaForm.reset({
+                tipo_saida: '',
+                valor: '',
+                discriminacao: '',
+                nome_recebedor: '',
+                data_pagamento: new Date().toISOString().split('T')[0],
+                data_vencimento: '',
+                forma_pagamento: '',
+                responsavel_pagamento: '',
+            });
+        }
     }
-  }, [isDrawerOpen, vendaParaEditar, activeTab, produtos, vendaForm]);
+  }, [isDrawerOpen, vendaParaEditar, despesaParaEditar, activeTab, produtos, vendaForm, despesaForm]);
 
-  // Efeito para calcular o valor total (sem alterações)
   const watchedProductId = vendaForm.watch("produto_id");
   const watchedPeso = vendaForm.watch("peso_produto");
   const watchedPrecoManual = vendaForm.watch("preco_manual");
@@ -98,7 +117,6 @@ export default function Movimentacoes() {
     }
   }, [watchedProductId, watchedPeso, watchedPrecoManual, produtos, vendaForm]);
 
-  // Função para submeter o formulário de venda (sem alterações nesta parte)
   const handleVendaSubmit = (values: VendaFormValues) => {
     const produtoSelecionado = produtos?.find(p => String(p.id) === values.produto_id);
     
@@ -124,30 +142,8 @@ export default function Movimentacoes() {
     }
   };
 
-  // O resto do arquivo permanece o mesmo
-  // ... (código restante sem alterações)
-  const handleAddNew = () => {
-    setVendaParaEditar(null);
-    setDespesaParaEditar(null);
-    setIsDrawerOpen(true);
-  };
-
-  const handleVendaEdit = (venda: Venda) => {
-    setActiveTab('vendas');
-    setDespesaParaEditar(null);
-    setVendaParaEditar(venda);
-    setIsDrawerOpen(true);
-  };
-  
-  const handleDespesaEdit = (despesa: Despesa) => {
-    setActiveTab('despesas');
-    setVendaParaEditar(null);
-    setDespesaParaEditar(despesa);
-    setIsDrawerOpen(true);
-  };
-  
   const handleDespesaSubmit = (values: DespesaFormValues) => {
-    const payload: CreateDespesaPayload | UpdateDespesaPayload = {
+    const payload: CreateDespesaPayloadType | UpdateDespesaPayload = {
         ...values,
         valor: parseFloat(values.valor),
         discriminacao: values.discriminacao || null,
@@ -166,6 +162,26 @@ export default function Movimentacoes() {
     } else {
       createDespesaMutation.mutate(payload, { onSuccess: () => handleSuccess('criada'), onError: (err) => handleError('criar', err) });
     }
+  };
+
+  const handleAddNew = () => {
+    setVendaParaEditar(null);
+    setDespesaParaEditar(null);
+    setIsDrawerOpen(true);
+  };
+
+  const handleVendaEdit = (venda: Venda) => {
+    setActiveTab('vendas');
+    setDespesaParaEditar(null);
+    setVendaParaEditar(venda);
+    setIsDrawerOpen(true);
+  };
+  
+  const handleDespesaEdit = (despesa: Despesa) => {
+    setActiveTab('despesas');
+    setVendaParaEditar(null);
+    setDespesaParaEditar(despesa);
+    setIsDrawerOpen(true);
   };
 
   const handleVendaDelete = (id: number) => { if (window.confirm("Tem certeza?")) { deleteVendaMutation.mutate(id, { onSuccess: () => toast.success("Venda apagada!"), onError: (err: any) => toast.error(`Erro: ${err.response?.data?.error || err.message}`) }); } };

@@ -1,19 +1,17 @@
-// frontend/src/pages/ProdutoForm.tsx
-
-import { UseFormReturn } from "react-hook-form"; // Importa apenas o tipo necessário
+import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// Schema de validação com Zod
-const formSchema = z.object({
+// 1. Remover 'dz' do enum de validação
+export const formSchema = z.object({
   nome: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres." }),
-  descricao: z.string().optional(),
+  unidade_medida: z.enum(['kg', 'un']), // Apenas 'kg' e 'un' são válidos
   preco: z.string()
     .min(1, { message: "O preço é obrigatório." })
-    .refine(value => !isNaN(parseFloat(value.replace(',', '.'))) && parseFloat(value.replace(',', '.')) > 0, {
+    .refine(value => !isNaN(parseFloat(value.replace(',', '.'))) && parseFloat(value) > 0, {
       message: "O preço deve ser um número maior que zero.",
     }),
 });
@@ -23,10 +21,18 @@ export type ProdutoFormValues = z.infer<typeof formSchema>;
 interface ProdutoFormProps {
   onSubmit: (values: ProdutoFormValues) => void;
   isSubmitting: boolean;
-  formInstance: UseFormReturn<ProdutoFormValues>; // Recebe a instância do form
+  formInstance: UseFormReturn<ProdutoFormValues>;
 }
 
 export default function ProdutoForm({ onSubmit, isSubmitting, formInstance: form }: ProdutoFormProps) {
+  const unidadeMedida = form.watch("unidade_medida");
+
+  const getUnidadeLabel = (unidade: string | undefined) => {
+    if (unidade === 'kg') return 'por Kg';
+    if (unidade === 'un') return 'por Unidade';
+    return '';
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-4">
@@ -43,25 +49,37 @@ export default function ProdutoForm({ onSubmit, isSubmitting, formInstance: form
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
-          name="descricao"
+          name="unidade_medida"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Descrição</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Detalhes do produto (opcional)" className="resize-none" {...field} />
-              </FormControl>
+              <FormLabel>Unidade de Medida</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  {/* 2. Adicionar a classe 'items-start' para alinhar o texto no topo */}
+                  <SelectTrigger className="items-start">
+                    <SelectValue placeholder="Selecione a unidade" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="kg">Quilograma (kg)</SelectItem>
+                  <SelectItem value="un">Unidade (un)</SelectItem>
+                  {/* 3. Opção 'Dúzia (dz)' removida */}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="preco"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Preço (R$)</FormLabel>
+              <FormLabel>Preço (R$) {getUnidadeLabel(unidadeMedida)}</FormLabel>
               <FormControl>
                 <Input type="number" step="0.01" placeholder="0.00" {...field} />
               </FormControl>
@@ -69,6 +87,7 @@ export default function ProdutoForm({ onSubmit, isSubmitting, formInstance: form
             </FormItem>
           )}
         />
+
         <Button type="submit" disabled={isSubmitting} className="w-full">
           {isSubmitting ? "Salvando..." : "Salvar Produto"}
         </Button>

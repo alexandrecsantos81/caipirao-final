@@ -22,10 +22,12 @@ router.get('/', async (req, res) => {
                 m.preco_manual,
                 m.responsavel_venda_id,
                 c.nome AS cliente_nome,
-                COALESCE(u.nickname, u.email) AS responsavel_venda_nome
+                COALESCE(u.nickname, u.email) AS responsavel_venda_nome,
+                p.unidade_medida -- << ADICIONAR ESTA LINHA
             FROM movimentacoes AS m
             LEFT JOIN clientes AS c ON m.cliente_id = c.id
             LEFT JOIN utilizadores AS u ON m.responsavel_venda_id = u.id
+            LEFT JOIN produtos AS p ON m.descricao = p.nome -- << ADICIONAR ESTA LINHA
             WHERE m.tipo = 'ENTRADA'
             ORDER BY m.data DESC, m.id DESC;
         `;

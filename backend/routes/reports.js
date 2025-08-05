@@ -1,16 +1,8 @@
-// /backend/routes/reports.js
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
-// ... (as outras rotas de relatório: /atividade-clientes, /vendas-por-periodo, /ranking-produtos, /ranking-clientes permanecem exatamente iguais) ...
-
-/**
- * @route   GET /api/reports/atividade-clientes
- * @desc    Obtém a contagem de clientes ativos e inativos.
- * @access  Private
- */
+// Rota /atividade-clientes (sem alterações)
 router.get('/atividade-clientes', async (req, res) => {
   try {
     const query = `
@@ -55,12 +47,7 @@ router.get('/atividade-clientes', async (req, res) => {
   }
 });
 
-
-/**
- * @route   GET /api/reports/vendas-por-periodo
- * @desc    Obtém o total de vendas, peso e transações agrupados por dia.
- * @access  Private
- */
+// Rota /vendas-por-periodo (sem alterações)
 router.get('/vendas-por-periodo', async (req, res) => {
   const { data_inicio, data_fim } = req.query;
   if (!data_inicio || !data_fim) {
@@ -86,9 +73,11 @@ router.get('/vendas-por-periodo', async (req, res) => {
   }
 });
 
+// ======================= INÍCIO DA ALTERAÇÃO =======================
+
 /**
  * @route   GET /api/reports/ranking-produtos
- * @desc    Obtém o ranking de produtos mais vendidos por faturamento.
+ * @desc    Obtém o ranking de produtos mais vendidos, agora incluindo a unidade de medida.
  * @access  Private
  */
 router.get('/ranking-produtos', async (req, res) => {
@@ -97,16 +86,23 @@ router.get('/ranking-produtos', async (req, res) => {
     return res.status(400).json({ error: "As datas de início e fim são obrigatórias." });
   }
   try {
+    // A query foi modificada para:
+    // 1. Juntar-se (LEFT JOIN) à tabela 'produtos' usando o nome do produto como chave.
+    // 2. Selecionar a coluna 'unidade_medida' da tabela de produtos.
+    // 3. Renomear SUM(m.peso) para 'quantidade_vendida' para ter um nome mais genérico.
+    // 4. Agrupar também por 'unidade_medida' para garantir a agregação correta.
     const query = `
-      SELECT
-        descricao AS produto_nome,
-        SUM(valor) AS faturamento_total,
-        SUM(peso) AS peso_total,
-        COUNT(id) AS transacoes
-      FROM movimentacoes
-      WHERE tipo = 'ENTRADA' AND data BETWEEN $1 AND $2
-      GROUP BY produto_nome
-      ORDER BY faturamento_total DESC;
+        SELECT
+          m.descricao AS produto_nome,
+          SUM(m.valor) AS faturamento_total,
+          SUM(m.peso) AS quantidade_vendida, -- Renomeado para clareza
+          p.unidade_medida, -- << ADICIONAR ESTA LINHA
+          COUNT(m.id) AS transacoes
+        FROM movimentacoes AS m
+        LEFT JOIN produtos AS p ON m.descricao = p.nome -- << ADICIONAR ESTA LINHA
+        WHERE m.tipo = 'ENTRADA' AND m.data BETWEEN $1 AND $2
+        GROUP BY m.descricao, p.unidade_medida -- << ATUALIZAR GROUP BY
+        ORDER BY faturamento_total DESC;
     `;
     const { rows } = await pool.query(query, [data_inicio, data_fim]);
     res.json(rows);
@@ -116,11 +112,10 @@ router.get('/ranking-produtos', async (req, res) => {
   }
 });
 
-/**
- * @route   GET /api/reports/ranking-clientes
- * @desc    Obtém o ranking de clientes que mais compraram.
- * @access  Private
- */
+// ======================== FIM DA ALTERAÇÃO =========================
+
+
+// Rota /ranking-clientes (sem alterações)
 router.get('/ranking-clientes', async (req, res) => {
   const { data_inicio, data_fim } = req.query;
   if (!data_inicio || !data_fim) {
@@ -147,12 +142,7 @@ router.get('/ranking-clientes', async (req, res) => {
   }
 });
 
-
-/**
- * @route   GET /api/reports/seller-productivity
- * @desc    Obtém a produtividade dos vendedores em um determinado período.
- * @access  Private
- */
+// Rota /seller-productivity (sem alterações)
 router.get('/seller-productivity', async (req, res) => {
   const { data_inicio, data_fim } = req.query;
 
@@ -161,9 +151,6 @@ router.get('/seller-productivity', async (req, res) => {
   }
 
   try {
-    // ======================= INÍCIO DA CORREÇÃO =======================
-    // A cláusula WHERE foi modificada para incluir utilizadores com perfil 'USER'
-    // OU qualquer utilizador que tenha vendas registadas no período.
     const query = `
       SELECT
         u.id AS vendedor_id,
@@ -186,7 +173,6 @@ router.get('/seller-productivity', async (req, res) => {
       ORDER BY
         total_vendas DESC, vendedor_nome ASC;
     `;
-    // ======================== FIM DA CORREÇÃO =========================
     const { rows } = await pool.query(query, [data_inicio, data_fim]);
     res.json(rows);
   } catch (err) {

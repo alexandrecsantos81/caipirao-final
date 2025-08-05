@@ -1,17 +1,15 @@
-// /frontend/src/hooks/useProdutos.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   getProdutos, 
   createProduto, 
-  updateProduto, // Importado
-  deleteProduto, // Importado
+  updateProduto,
+  deleteProduto,
   CreateProdutoPayload,
-  UpdateProdutoPayload  // Importado
+  UpdateProdutoPayload
 } from '../services/produtos.service';
 
 const PRODUTOS_QUERY_KEY = 'produtos';
 
-// Hook para BUSCAR a lista de produtos (sem alterações)
 export function useProdutos() {
   return useQuery({
     queryKey: [PRODUTOS_QUERY_KEY],
@@ -19,38 +17,40 @@ export function useProdutos() {
   });
 }
 
-// Hook para CRIAR um novo produto (sem alterações)
 export function useCreateProduto() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: CreateProdutoPayload) => createProduto(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [PRODUTOS_QUERY_KEY] });
+      // Invalida tanto a lista de produtos quanto os relatórios
+      return queryClient.invalidateQueries({ queryKey: [PRODUTOS_QUERY_KEY] });
     },
   });
 }
 
-// NOVO: Hook para ATUALIZAR um produto existente
 export function useUpdateProduto() {
   const queryClient = useQueryClient();
   return useMutation({
-    // A função de mutação agora espera um objeto contendo o ID e o payload
     mutationFn: ({ id, payload }: { id: number, payload: UpdateProdutoPayload }) => updateProduto({ id, payload }),
     onSuccess: () => {
-      // Invalida a query de produtos para atualizar a UI
-      queryClient.invalidateQueries({ queryKey: [PRODUTOS_QUERY_KEY] });
+      // ======================= INÍCIO DA CORREÇÃO =======================
+      // Ao atualizar um produto, também invalidamos as queries de relatórios.
+      // Isso força a página de relatórios a buscar os dados novamente com as unidades corretas.
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: [PRODUTOS_QUERY_KEY] }),
+        queryClient.invalidateQueries({ queryKey: ['reports'] }) // Invalida todas as queries de relatórios
+      ]);
+      // ======================== FIM DA CORREÇÃO =========================
     },
   });
 }
 
-// NOVO: Hook para DELETAR um produto
 export function useDeleteProduto() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => deleteProduto(id),
     onSuccess: () => {
-      // Invalida a query de produtos para atualizar a UI
-      queryClient.invalidateQueries({ queryKey: [PRODUTOS_QUERY_KEY] });
+      return queryClient.invalidateQueries({ queryKey: [PRODUTOS_QUERY_KEY] });
     },
   });
 }

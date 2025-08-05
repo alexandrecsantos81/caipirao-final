@@ -1,5 +1,3 @@
-// /frontend/src/pages/RelatoriosPage.tsx
-
 import { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -55,20 +53,33 @@ export default function RelatoriosPage() {
         });
         break;
       case 'ranking_produtos':
+        // CORREÇÃO: Adicionada verificação para evitar erro com dados indefinidos
         if (!produtosQuery.data) return;
         exportToPdf({
           reportName: 'Ranking de Produtos',
-          headers: ['Pos.', 'Produto', 'Faturamento (R$)', 'Peso Vendido (kg)', 'Nº Vendas'],
-          data: produtosQuery.data.map((item, index) => [`${index + 1}º`, item.produto_nome, formatCurrency(parseFloat(item.faturamento_total)), formatNumber(parseFloat(item.peso_total)), item.transacoes]),
+          headers: ['Pos.', 'Produto', 'Faturamento (R$)', 'Qtd. Vendida', 'Nº Vendas'],
+          data: produtosQuery.data.map((item, index) => [
+            `${index + 1}º`, 
+            item.produto_nome, 
+            formatCurrency(parseFloat(item.faturamento_total)), 
+            `${formatNumber(parseFloat(item.quantidade_vendida))} ${item.unidade_medida}`, 
+            item.transacoes
+          ]),
           period: { start: dataInicio, end: dataFim },
         });
         break;
       case 'ranking_clientes':
+        // CORREÇÃO: Adicionada verificação para evitar erro com dados indefinidos
         if (!clientesQuery.data) return;
         exportToPdf({
           reportName: 'Ranking de Clientes',
-          headers: ['Pos.', 'Cliente', 'Valor Gasto (R$)', 'Peso Comprado (kg)', 'Nº Compras'],
-          data: clientesQuery.data.map((item, index) => [`${index + 1}º`, item.cliente_nome, formatCurrency(parseFloat(item.faturamento_total)), formatNumber(parseFloat(item.peso_total)), item.transacoes]),
+          headers: ['Pos.', 'Cliente', 'Valor Gasto (R$)', 'Nº Compras'],
+          data: clientesQuery.data.map((item, index) => [
+            `${index + 1}º`, 
+            item.cliente_nome, 
+            formatCurrency(parseFloat(item.faturamento_total)), 
+            item.transacoes
+          ]),
           period: { start: dataInicio, end: dataFim },
         });
         break;
@@ -130,14 +141,7 @@ export default function RelatoriosPage() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        {/* ======================= INÍCIO DA CORREÇÃO ======================= */}
-        {/*
-          - `grid-cols-1`: Garante que no modo mobile (padrão) haverá apenas uma coluna.
-          - `sm:grid-cols-3`: A partir do breakpoint 'sm', o layout muda para 3 colunas.
-          - `w-full`: Garante que o container ocupe toda a largura disponível.
-        */}
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto">
-        {/* ======================== FIM DA CORREÇÃO ========================= */}
           <TabsTrigger value="vendas_gerais"><BarChart2 className="mr-2 h-4 w-4" />Vendas Gerais</TabsTrigger>
           <TabsTrigger value="ranking_produtos"><Crown className="mr-2 h-4 w-4" />Ranking de Produtos</TabsTrigger>
           <TabsTrigger value="ranking_clientes"><User className="mr-2 h-4 w-4" />Ranking de Clientes</TabsTrigger>
@@ -151,8 +155,24 @@ export default function RelatoriosPage() {
           {produtosQuery.data && !produtosQuery.isLoading && (
             <Card className="mt-6"><CardHeader><CardTitle>Produtos Mais Vendidos</CardTitle><CardDescription>Ranking por faturamento no período selecionado.</CardDescription></CardHeader><CardContent>
               <Table>
-                <TableHeader><TableRow><TableHead>Posição</TableHead><TableHead>Produto</TableHead><TableHead className="text-right">Faturamento</TableHead><TableHead className="text-right">Peso Vendido (kg)</TableHead><TableHead className="text-right">Nº Vendas</TableHead></TableRow></TableHeader>
-                <TableBody>{produtosQuery.data.map((item, index) => (<TableRow key={item.produto_nome}><TableCell className="font-medium">{index + 1}º</TableCell><TableCell>{item.produto_nome}</TableCell><TableCell className="text-right">{formatCurrency(parseFloat(item.faturamento_total))}</TableCell><TableCell className="text-right">{formatNumber(parseFloat(item.peso_total))}</TableCell><TableCell className="text-right">{item.transacoes}</TableCell></TableRow>))}</TableBody>
+                <TableHeader><TableRow>
+                  <TableHead>Posição</TableHead>
+                  <TableHead>Produto</TableHead>
+                  <TableHead className="text-right">Faturamento</TableHead>
+                  <TableHead className="text-right">Qtd. Vendida</TableHead>
+                  <TableHead className="text-right">Nº Vendas</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>{produtosQuery.data.map((item, index) => (
+                  <TableRow key={item.produto_nome}>
+                    <TableCell className="font-medium">{index + 1}º</TableCell>
+                    <TableCell>{item.produto_nome}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(parseFloat(item.faturamento_total))}</TableCell>
+                    <TableCell className="text-right">
+                      {`${formatNumber(parseFloat(item.quantidade_vendida))} ${item.unidade_medida}`}
+                    </TableCell>
+                    <TableCell className="text-right">{item.transacoes}</TableCell>
+                  </TableRow>
+                ))}</TableBody>
               </Table>
             </CardContent></Card>
           )}
@@ -164,8 +184,20 @@ export default function RelatoriosPage() {
           {clientesQuery.data && !clientesQuery.isLoading && (
             <Card className="mt-6"><CardHeader><CardTitle>Clientes com Maior Volume de Compra</CardTitle><CardDescription>Ranking por valor total de compras no período selecionado.</CardDescription></CardHeader><CardContent>
               <Table>
-                <TableHeader><TableRow><TableHead>Posição</TableHead><TableHead>Cliente</TableHead><TableHead className="text-right">Valor Gasto</TableHead><TableHead className="text-right">Peso Comprado (kg)</TableHead><TableHead className="text-right">Nº Compras</TableHead></TableRow></TableHeader>
-                <TableBody>{clientesQuery.data.map((item, index) => (<TableRow key={item.cliente_nome}><TableCell className="font-medium">{index + 1}º</TableCell><TableCell>{item.cliente_nome}</TableCell><TableCell className="text-right">{formatCurrency(parseFloat(item.faturamento_total))}</TableCell><TableCell className="text-right">{formatNumber(parseFloat(item.peso_total))}</TableCell><TableCell className="text-right">{item.transacoes}</TableCell></TableRow>))}</TableBody>
+                <TableHeader><TableRow>
+                  <TableHead>Posição</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead className="text-right">Valor Gasto</TableHead>
+                  <TableHead className="text-right">Nº Compras</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>{clientesQuery.data.map((item, index) => (
+                  <TableRow key={item.cliente_nome}>
+                    <TableCell className="font-medium">{index + 1}º</TableCell>
+                    <TableCell>{item.cliente_nome}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(parseFloat(item.faturamento_total))}</TableCell>
+                    <TableCell className="text-right">{item.transacoes}</TableCell>
+                  </TableRow>
+                ))}</TableBody>
               </Table>
             </CardContent></Card>
           )}
