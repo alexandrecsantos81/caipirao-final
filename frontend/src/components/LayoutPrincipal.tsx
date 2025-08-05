@@ -1,15 +1,15 @@
 // frontend/src/components/LayoutPrincipal.tsx
 
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router-dom'; // 1. IMPORTAR O OUTLET
 import { useTheme } from '@/contexts/ThemeProvider';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Moon, Sun, PanelLeftClose, PanelLeftOpen, Menu } from 'lucide-react';
 import AppSidebar from '@/components/layout/AppSidebar';
-// import { cn } from '@/lib/utils'; // <-- REMOVER ESTA LINHA
 
-export default function LayoutPrincipal() {
+// 2. ADICIONAR A PROP 'children'
+export default function LayoutPrincipal({ children }: { children: React.ReactNode }) {
   const { setTheme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -24,6 +24,7 @@ export default function LayoutPrincipal() {
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex h-14 shrink-0 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+          {/* ... (código do header permanece o mesmo) ... */}
           <Button
             variant="outline"
             size="icon"
@@ -66,7 +67,8 @@ export default function LayoutPrincipal() {
         </header>
         
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          <Outlet />
+          {/* 3. RENDERIZAR OS FILHOS AQUI */}
+          {children}
         </main>
       </div>
     </div>

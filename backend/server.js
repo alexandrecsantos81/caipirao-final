@@ -3,7 +3,7 @@
 // --- 1. Importações ---
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors'); // Importa o pacote CORS
+const cors = require('cors'); // Pacote CORS já importado
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('./db');
@@ -24,32 +24,35 @@ const PORT = process.env.PORT || 3000;
 // --- 4. Middlewares ---
 
 // ======================= INÍCIO DA CORREÇÃO DE CORS =======================
-// Lista de origens que têm permissão para acessar esta API
+// Lista de origens (domínios) que têm permissão para acessar esta API.
 const allowedOrigins = [
-  'https://caipirao.netlify.app', // URL do seu frontend em produção
+  'https://caipirao.netlify.app', // URL do seu frontend em produção na Netlify
   'http://localhost:5173'       // URL do seu frontend para desenvolvimento local
 ];
 
 const corsOptions = {
   origin: function (origin, callback ) {
-    // Permite requisições sem 'origin' (como apps mobile ou Postman) ou se a origem estiver na lista
+    // Permite requisições sem 'origin' (como apps mobile ou Postman) 
+    // ou se a origem estiver na nossa lista de permissões.
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('Acesso não permitido pela política de CORS'));
     }
   },
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Métodos HTTP permitidos
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Métodos HTTP que permitimos
+  credentials: true, // Permite o envio de cookies (se necessário no futuro)
+  optionsSuccessStatus: 204 // Necessário para algumas versões de navegadores
 };
 
-app.use(cors(corsOptions)); // Aplica as opções de CORS a todas as rotas
+// Aplica as opções de CORS a todas as rotas da nossa API.
+app.use(cors(corsOptions));
 app.use(express.json());
 // ======================== FIM DA CORREÇÃO DE CORS =========================
 
 
 // --- 5. Rotas de Autenticação (Públicas) ---
-// (O restante do arquivo permanece o mesmo)
-
+// ... (o restante do arquivo continua exatamente o mesmo)
 // Rota para REGISTRAR um novo usuário
 app.post('/auth/register', async (req, res) => {
   const { email, senha } = req.body;
@@ -128,6 +131,7 @@ app.use('/api/movimentacoes', verifyToken, movimentacoesRouter);
 app.use('/api/despesas', verifyToken, despesasRouter);
 app.use('/api/reports', verifyToken, reportsRouter);
 app.use('/api/users', verifyToken, checkAdmin, usersRouter);
+
 
 // --- 7. Inicialização do Servidor ---
 app.listen(PORT, () => {
