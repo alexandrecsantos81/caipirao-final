@@ -3,7 +3,7 @@
 // --- 1. Importações ---
 require('dotenv').config();
 const express = require('express');
-const cors =require('cors');
+const cors = require('cors'); // Importa o pacote CORS
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('./db');
@@ -22,24 +22,33 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- 4. Middlewares ---
+
+// ======================= INÍCIO DA CORREÇÃO DE CORS =======================
+// Lista de origens que têm permissão para acessar esta API
 const allowedOrigins = [
-  'https://caipirao.netlify.app',
-  'http://localhost:5173'
+  'https://caipirao.netlify.app', // URL do seu frontend em produção
+  'http://localhost:5173'       // URL do seu frontend para desenvolvimento local
 ];
+
 const corsOptions = {
   origin: function (origin, callback ) {
+    // Permite requisições sem 'origin' (como apps mobile ou Postman) ou se a origem estiver na lista
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('Acesso não permitido pela política de CORS'));
     }
   },
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Métodos HTTP permitidos
 };
-app.use(cors(corsOptions));
+
+app.use(cors(corsOptions)); // Aplica as opções de CORS a todas as rotas
 app.use(express.json());
+// ======================== FIM DA CORREÇÃO DE CORS =========================
+
 
 // --- 5. Rotas de Autenticação (Públicas) ---
+// (O restante do arquivo permanece o mesmo)
 
 // Rota para REGISTRAR um novo usuário
 app.post('/auth/register', async (req, res) => {
@@ -71,14 +80,13 @@ app.post('/auth/register', async (req, res) => {
   }
 });
 
-// Rota para fazer LOGIN (MODIFICADA PARA ACEITAR MÚLTIPLOS IDENTIFICADORES)
+// Rota para fazer LOGIN
 app.post('/auth/login', async (req, res) => {
   const { identificador, senha } = req.body;
   if (!identificador || !senha) {
     return res.status(400).json({ error: "O identificador e a senha são obrigatórios." });
   }
   try {
-    // A query agora busca em três colunas: email, nickname e telefone
     const query = "SELECT * FROM utilizadores WHERE email = $1 OR nickname = $1 OR telefone = $1";
     const result = await pool.query(query, [identificador]);
     const utilizador = result.rows[0];
@@ -96,7 +104,7 @@ app.post('/auth/login', async (req, res) => {
       id: utilizador.id,
       email: utilizador.email,
       perfil: utilizador.perfil,
-      nickname: utilizador.nickname // << CAMPO ADICIONADO
+      nickname: utilizador.nickname
     };
 
     const token = jwt.sign(
