@@ -1,11 +1,12 @@
+import { useMemo } from "react"; // 1. Importar o hook useMemo
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-// 1. Importar os componentes do Select
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useUsers } from "@/hooks/useUsers"; // 2. Importar o hook para buscar usuários
 
 // O schema de validação permanece o mesmo
 export const formSchema = z.object({
@@ -29,25 +30,25 @@ interface DespesaFormProps {
   formInstance: UseFormReturn<DespesaFormValues>;
 }
 
-// 2. Definir a lista de tipos de despesa
 const tiposDeDespesa = [
-  "Insumos de Produção",
-  "Mão de Obra",
-  "Materiais e Embalagens",
-  "Despesas Operacionais",
-  "Encargos e Tributos",
-  "Despesas Administrativas",
-  "Financeiras",
-  "Remuneração de Sócios",
-  "Outros" // Adicionado para casos não previstos
+  "Insumos de Produção", "Mão de Obra", "Materiais e Embalagens",
+  "Despesas Operacionais", "Encargos e Tributos", "Despesas Administrativas",
+  "Financeiras", "Remuneração de Sócios", "Outros"
 ];
 
 export default function DespesaForm({ onSubmit, isSubmitting, formInstance: form }: DespesaFormProps) {
+  // 3. Buscar a lista de todos os usuários
+  const { data: usuarios } = useUsers();
+
+  // 4. Filtrar apenas os administradores, usando useMemo para otimização
+  const administradores = useMemo(() => {
+    return usuarios?.filter(user => user.perfil === 'ADMIN') || [];
+  }, [usuarios]);
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-1">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* 3. Substituir o Input pelo Select */}
           <FormField
             control={form.control}
             name="tipo_saida"
@@ -56,16 +57,10 @@ export default function DespesaForm({ onSubmit, isSubmitting, formInstance: form
                 <FormLabel>Tipo de Saída</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo da despesa" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Selecione o tipo da despesa" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {tiposDeDespesa.map((tipo) => (
-                      <SelectItem key={tipo} value={tipo}>
-                        {tipo}
-                      </SelectItem>
-                    ))}
+                    {tiposDeDespesa.map((tipo) => (<SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -111,13 +106,31 @@ export default function DespesaForm({ onSubmit, isSubmitting, formInstance: form
               <FormMessage />
             </FormItem>
           )} />
-           <FormField control={form.control} name="responsavel_pagamento" render={({ field }) => (
-            <FormItem>
-              <FormLabel>Responsável pelo Pagamento</FormLabel>
-              <FormControl><Input placeholder="Nome do responsável" {...field} /></FormControl>
-              <FormMessage />
-            </FormItem>
-          )} />
+           {/* 5. Substituir o Input pelo Select para o responsável */}
+           <FormField
+            control={form.control}
+            name="responsavel_pagamento"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Responsável pelo Pagamento</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o responsável" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {administradores.map((admin) => (
+                      <SelectItem key={admin.id} value={admin.nickname || admin.email}>
+                        {admin.nickname || admin.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <Button type="submit" disabled={isSubmitting} className="w-full !mt-6">
           {isSubmitting ? "Salvando..." : "Salvar Despesa"}
