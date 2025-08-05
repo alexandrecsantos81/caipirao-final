@@ -16,7 +16,7 @@ export interface Venda {
   data_vencimento: string | null;
   preco_manual: number | null;
   responsavel_venda_id: number | null;
-  responsavel_venda_nome: string | null; // Recebe o nickname ou email do vendedor
+  responsavel_venda_nome: string | null;
   unidade_medida: 'kg' | 'un' | null;
 }
 
@@ -32,13 +32,17 @@ export type CreateMovimentacaoPayload = {
   peso_produto: number | null;
   valor_total: number;
   preco_manual: number | null;
-  responsavel_venda_id: number; // Envia o ID do vendedor
+  responsavel_venda_id: number; // Campo obrigatório
 };
 
 /**
  * Tipo para o payload de atualização de uma venda.
  */
+// ======================= INÍCIO DA CORREÇÃO =======================
+// O tipo de atualização deve seguir as mesmas regras do de criação.
 export type UpdateMovimentacaoPayload = CreateMovimentacaoPayload;
+// ======================== FIM DA CORREÇÃO =========================
+
 
 /**
  * Busca a lista de todas as vendas (movimentações de entrada).

@@ -1,12 +1,12 @@
 // /frontend/src/pages/Dashboard.tsx
 
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom'; // 1. IMPORTAR O LINK
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMovimentacoes, useUpdateMovimentacao } from "@/hooks/useMovimentacoes";
 import { useDespesas } from "@/hooks/useDespesas";
-import { useAtividadeClientes } from '@/hooks/useReports';
-import { Venda } from '@/services/movimentacoes.service';
+import { useAtividadeClientes, useRankingClientes, useRankingProdutos, useSellerProductivity } from '@/hooks/useReports';
+import { Venda, UpdateMovimentacaoPayload } from '@/services/movimentacoes.service';
 import { toast } from 'sonner';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Package, AlertCircle, CreditCard, TrendingUp, TrendingDown } from "lucide-react";
+import { Terminal, Package, AlertCircle, CreditCard, TrendingUp, TrendingDown, Crown, Users } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import QuickPaymentDialog from './QuickPaymentDialog';
 
@@ -43,11 +43,6 @@ const toISODateString = (date: Date) => date.toISOString().split('T')[0];
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { data: vendas, isLoading: isLoadingVendas, isError: isErrorVendas } = useMovimentacoes();
-  const { data: despesas, isLoading: isLoadingDespesas, isError: isErrorDespesas } = useDespesas();
-  const { data: atividadeClientes, isLoading: isLoadingAtividade } = useAtividadeClientes();
-  const updateVendaMutation = useUpdateMovimentacao();
-
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [vendaParaQuitar, setVendaParaQuitar] = useState<Venda | null>(null);
   
@@ -58,9 +53,49 @@ export default function Dashboard() {
   const [dataInicio, setDataInicio] = useState(toISODateString(new Date()));
   const [dataFim, setDataFim] = useState(toISODateString(new Date()));
 
-  const { kpis, dadosGraficoPrincipal, movimentacoesFiltradas, totalMovimentacoes, dadosGraficoProdutos, tituloGraficoProdutos, proximosVencimentos } = useMemo(() => {
+  // --- Hooks de busca de dados ---
+  const { data: vendas, isLoading: isLoadingVendas, isError: isErrorVendas } = useMovimentacoes();
+  const { data: despesas, isLoading: isLoadingDespesas, isError: isErrorDespesas } = useDespesas();
+  const { data: atividadeClientes, isLoading: isLoadingAtividade } = useAtividadeClientes();
+  const updateVendaMutation = useUpdateMovimentacao();
+
+  const { reportStartDate, reportEndDate } = useMemo(() => {
+    const now = new Date();
+    let startDate = new Date();
+    switch (periodoGrafico) {
+      case '6M':
+        startDate.setMonth(now.getMonth() - 6);
+        break;
+      case 'ANO':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      case '5A':
+        startDate.setFullYear(now.getFullYear() - 5);
+        break;
+    }
+    return {
+      reportStartDate: toISODateString(startDate),
+      reportEndDate: toISODateString(now),
+    };
+  }, [periodoGrafico]);
+
+  const { data: rankingClientes, isLoading: isLoadingRankingClientes } = useRankingClientes({
+    data_inicio: reportStartDate,
+    data_fim: reportEndDate,
+  });
+  const { data: produtividadeVendedores, isLoading: isLoadingProdutividade } = useSellerProductivity({
+    data_inicio: reportStartDate,
+    data_fim: reportEndDate,
+  });
+  const { data: rankingProdutos, isLoading: isLoadingRankingProdutos } = useRankingProdutos({
+    data_inicio: reportStartDate,
+    data_fim: reportEndDate,
+  });
+
+  // --- Cálculos e formatação dos dados ---
+  const { kpis, dadosGraficoPrincipal, movimentacoesFiltradas, totalMovimentacoes, dadosGraficoProdutos, tituloGraficoProdutos, proximosVencimentos, top5Clientes, top5Vendedores } = useMemo(() => {
     if (!vendas || !despesas) {
-      return { kpis: { label: 'Mês Atual', entradas: 0, saidas: 0, saldo: 0 }, dadosGraficoPrincipal: [], movimentacoesFiltradas: [], totalMovimentacoes: 0, dadosGraficoProdutos: [], tituloGraficoProdutos: 'Análise de Produtos', proximosVencimentos: [] };
+      return { kpis: { label: 'Mês Atual', entradas: 0, saidas: 0, saldo: 0 }, dadosGraficoPrincipal: [], movimentacoesFiltradas: [], totalMovimentacoes: 0, dadosGraficoProdutos: [], tituloGraficoProdutos: 'Análise de Produtos', proximosVencimentos: [], top5Clientes: [], top5Vendedores: [] };
     }
 
     const now = new Date();
@@ -96,28 +131,10 @@ export default function Dashboard() {
     }
     const dadosGraficoPrincipal = Array.from(dataMap.entries()).map(([name, values]) => ({ name, ...values }));
 
-    const vendasFiltradasGrafico = vendas.filter(v => {
-        if (!v.data_venda) return false;
-        const vendaDate = new Date(v.data_venda);
-        if (periodoGrafico === '6M') {
-            const seisMesesAtras = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-            return vendaDate >= seisMesesAtras;
-        }
-        if (periodoGrafico === 'ANO') return vendaDate.getFullYear() === currentYear;
-        if (periodoGrafico === '5A') return vendaDate.getFullYear() >= (currentYear - 4);
-        return true;
-    });
+    const dadosGraficoProdutos = rankingProdutos
+      ?.map(p => ({ name: p.produto_nome, Faturamento: parseFloat(p.faturamento_total), Peso: parseFloat(p.quantidade_vendida) || 0 })) // <--- CORREÇÃO APLICADA
+      .slice(0, 10) || [];
 
-    const produtosMap = new Map<string, { Faturamento: number, Peso: number }>();
-    vendasFiltradasGrafico.forEach(v => {
-      if (v.produto_nome) {
-        const entry = produtosMap.get(v.produto_nome) || { Faturamento: 0, Peso: 0 };
-        entry.Faturamento += Number(v.valor_total) || 0;
-        entry.Peso += Number(v.peso) || 0;
-        produtosMap.set(v.produto_nome, entry);
-      }
-    });
-    const dadosGraficoProdutos = Array.from(produtosMap.entries()).map(([name, values]) => ({ name, ...values })).sort((a, b) => b.Faturamento - a.Faturamento);
 
     const todasMovimentacoes = [
       ...vendas.map(v => ({ ...v, tipo: 'Entrada' as const, data: v.data_venda, valor: v.valor_total, descricao: v.produto_nome })),
@@ -174,9 +191,18 @@ export default function Dashboard() {
       })
       .sort((a, b) => a.dias_para_vencer - b.dias_para_vencer);
 
-    return { kpis, dadosGraficoPrincipal, movimentacoesFiltradas, totalMovimentacoes, dadosGraficoProdutos, tituloGraficoProdutos, proximosVencimentos };
-  }, [vendas, despesas, periodoGrafico, filtroData, filtroTipo, dataInicio, dataFim]);
+    const top5Clientes = rankingClientes
+      ?.map(c => ({ name: c.cliente_nome, Faturamento: parseFloat(c.faturamento_total) }))
+      .slice(0, 5) || [];
 
+    const top5Vendedores = produtividadeVendedores
+      ?.map(v => ({ name: v.vendedor_nome, Vendas: parseFloat(v.total_vendas) }))
+      .slice(0, 5) || [];
+
+    return { kpis, dadosGraficoPrincipal, movimentacoesFiltradas, totalMovimentacoes, dadosGraficoProdutos, tituloGraficoProdutos, proximosVencimentos, top5Clientes, top5Vendedores };
+  }, [vendas, despesas, periodoGrafico, filtroData, filtroTipo, dataInicio, dataFim, rankingClientes, produtividadeVendedores, rankingProdutos]);
+
+    // --- Funções de Manipulação de Eventos ---
   const handleBarClick = (data: any) => {
     if (data && data.activePayload && data.activePayload[0]) {
       const payload = data.activePayload[0].payload;
@@ -196,11 +222,22 @@ export default function Dashboard() {
       return;
     }
 
-    const payload = {
-      ...vendaOriginal,
+    const responsavelId = vendaOriginal.responsavel_venda_id ?? user?.id;
+    if (!responsavelId) {
+        toast.error("Não foi possível determinar o vendedor responsável para a quitação.");
+        return;
+    }
+
+    const payload: UpdateMovimentacaoPayload = {
+      cliente_id: vendaOriginal.cliente_id,
       produto_nome: vendaOriginal.produto_nome,
+      data_venda: vendaOriginal.data_venda,
+      valor_total: vendaOriginal.valor_total,
       peso_produto: vendaOriginal.peso,
       data_pagamento: dataPagamento,
+      data_vencimento: vendaOriginal.data_vencimento,
+      preco_manual: vendaOriginal.preco_manual,
+      responsavel_venda_id: responsavelId,
     };
 
     updateVendaMutation.mutate({ id: vendaId, payload }, {
@@ -215,7 +252,8 @@ export default function Dashboard() {
     });
   };
 
-  const isLoading = isLoadingVendas || isLoadingDespesas || isLoadingAtividade;
+  // --- Renderização ---
+  const isLoading = isLoadingVendas || isLoadingDespesas || isLoadingAtividade || isLoadingRankingClientes || isLoadingProdutividade || isLoadingRankingProdutos;
   const isError = isErrorVendas || isErrorDespesas;
   const kpisEmExibicao = periodoEmFoco || kpis;
 
@@ -231,7 +269,8 @@ export default function Dashboard() {
             <Skeleton className="h-32" />
         </div>
         <Skeleton className="h-48 w-full" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5"><Skeleton className="h-80 lg:col-span-3" /><Skeleton className="h-80 lg:col-span-2" /></div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2"><Skeleton className="h-80" /><Skeleton className="h-80" /></div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2"><Skeleton className="h-80" /><Skeleton className="h-80" /></div>
       </div>
     );
   }
@@ -255,98 +294,19 @@ export default function Dashboard() {
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Entradas ({kpisEmExibicao.label})</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-green-600">{formatCurrency(kpisEmExibicao.entradas)}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Saídas ({kpisEmExibicao.label})</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-red-600">{formatCurrency(kpisEmExibicao.saidas)}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Saldo ({kpisEmExibicao.label})</CardTitle></CardHeader><CardContent><div className={`text-2xl font-bold ${kpisEmExibicao.saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>{formatCurrency(kpisEmExibicao.saldo)}</div></CardContent></Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clientes Ativos</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{atividadeClientes?.ativos ?? 0}</div>
-            <p className="text-xs text-muted-foreground">Compraram nos últimos 3 meses</p>
-          </CardContent>
-        </Card>
-
-        {/* 2. ENVOLVER O CARD COM O COMPONENTE LINK */}
-        <Link to="/clientes" className="cursor-pointer hover:shadow-lg transition-shadow rounded-lg">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Clientes Inativos</CardTitle>
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{atividadeClientes?.inativos ?? 0}</div>
-              <p className="text-xs text-muted-foreground">Sem compras há mais de 3 meses</p>
-            </CardContent>
-          </Card>
-        </Link>
+        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Clientes Ativos</CardTitle><TrendingUp className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{atividadeClientes?.ativos ?? 0}</div><p className="text-xs text-muted-foreground">Compraram nos últimos 3 meses</p></CardContent></Card>
+        <Link to="/clientes" className="cursor-pointer hover:shadow-lg transition-shadow rounded-lg"><Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Clientes Inativos</CardTitle><TrendingDown className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{atividadeClientes?.inativos ?? 0}</div><p className="text-xs text-muted-foreground">Sem compras há mais de 3 meses</p></CardContent></Card></Link>
       </div>
-
       <Card className="border-yellow-500 bg-yellow-50/50 dark:bg-yellow-900/20 dark:border-yellow-700">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-400">
-            <AlertCircle size={22} />
-            Pagamentos a Vencer (Próximos 5 dias)
-          </CardTitle>
-          <CardDescription className="text-yellow-700 dark:text-yellow-500">
-            Clientes com pagamentos pendentes que vencem em breve.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {proximosVencimentos.length > 0 ? (
-            <div className="max-h-[200px] overflow-y-auto">
-                <Table>
-                <TableHeader>
-                    <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Vence em</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    {user?.perfil === 'ADMIN' && <TableHead className="text-center">Ação</TableHead>}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {proximosVencimentos.map((v, index) => (
-                    <TableRow key={index}>
-                        <TableCell className="font-medium">{v.cliente_nome}</TableCell>
-                        <TableCell>
-                        <Badge variant={v.dias_para_vencer <= 1 ? "destructive" : "secondary"}>
-                            {v.dias_para_vencer === 0 ? 'Hoje' : `${v.dias_para_vencer} dia(s)`}
-                        </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">{formatCurrency(v.valor_total)}</TableCell>
-                        {user?.perfil === 'ADMIN' && (
-                          <TableCell className="text-center">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenQuickPayment(v.venda)}
-                            >
-                              <CreditCard className="mr-2 h-4 w-4" />
-                              Quitar
-                            </Button>
-                          </TableCell>
-                        )}
-                    </TableRow>
-                    ))}
-                </TableBody>
-                </Table>
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-sm text-gray-600">Nenhum pagamento a vencer nos próximos 5 dias.</p>
-            </div>
-          )}
-        </CardContent>
+        <CardHeader><CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-400"><AlertCircle size={22} />Pagamentos a Vencer (Próximos 5 dias)</CardTitle><CardDescription className="text-yellow-700 dark:text-yellow-500">Clientes com pagamentos pendentes que vencem em breve.</CardDescription></CardHeader>
+        <CardContent>{proximosVencimentos.length > 0 ? (<div className="max-h-[200px] overflow-y-auto"><Table><TableHeader><TableRow><TableHead>Cliente</TableHead><TableHead>Vence em</TableHead><TableHead className="text-right">Valor</TableHead>{user?.perfil === 'ADMIN' && <TableHead className="text-center">Ação</TableHead>}</TableRow></TableHeader><TableBody>{proximosVencimentos.map((v, index) => (<TableRow key={index}><TableCell className="font-medium">{v.cliente_nome}</TableCell><TableCell><Badge variant={v.dias_para_vencer <= 1 ? "destructive" : "secondary"}>{v.dias_para_vencer === 0 ? 'Hoje' : `${v.dias_para_vencer} dia(s)`}</Badge></TableCell><TableCell className="text-right font-semibold">{formatCurrency(v.valor_total)}</TableCell>{user?.perfil === 'ADMIN' && (<TableCell className="text-center"><Button variant="outline" size="sm" onClick={() => handleOpenQuickPayment(v.venda)}><CreditCard className="mr-2 h-4 w-4" />Quitar</Button></TableCell>)}</TableRow>))}</TableBody></Table></div>) : (<div className="text-center py-4"><p className="text-sm text-gray-600">Nenhum pagamento a vencer nos próximos 5 dias.</p></div>)}</CardContent>
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:justify-between sm:items-center">
-              <div>
-                <CardTitle>Visão Geral Financeira</CardTitle>
-                <CardDescription>Entradas vs. Saídas por período</CardDescription>
-              </div>
+              <div><CardTitle>Visão Geral Financeira</CardTitle><CardDescription>Entradas vs. Saídas por período</CardDescription></div>
               <div className="flex gap-1">
                 <Button variant={periodoGrafico === '6M' ? 'default' : 'outline'} size="sm" onClick={() => { setPeriodoGrafico('6M'); setPeriodoEmFoco(null); }}>6 Meses</Button>
                 <Button variant={periodoGrafico === 'ANO' ? 'default' : 'outline'} size="sm" onClick={() => { setPeriodoGrafico('ANO'); setPeriodoEmFoco(null); }}>Este Ano</Button>
@@ -355,35 +315,44 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent className="pl-2">
+            <ResponsiveContainer width="100%" height={350}><BarChart data={dadosGraficoPrincipal} onClick={handleBarClick}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} /><YAxis yAxisId="left" stroke="#22c55e" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value / 1000}k`} /><Tooltip formatter={(value: number) => formatCurrency(value)} /><Legend /><Bar yAxisId="left" dataKey="Entradas" fill="#22c55e" radius={[4, 4, 0, 0]} cursor="pointer" /><Bar yAxisId="left" dataKey="Saídas" fill="#ef4444" radius={[4, 4, 0, 0]} cursor="pointer" /></BarChart></ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Package size={20} /> {tituloGraficoProdutos}</CardTitle><CardDescription>Faturamento por produto no período.</CardDescription></CardHeader>
+          <CardContent className="pl-2">
+            <ResponsiveContainer width="100%" height={350}><BarChart data={dadosGraficoProdutos} layout="vertical"><CartesianGrid strokeDasharray="3 3" /><XAxis type="number" hide /><YAxis type="category" dataKey="name" width={80} stroke="#888888" fontSize={12} /><Tooltip formatter={(value: number, name: string) => name === 'Peso' ? `${formatNumber(value)} kg` : formatCurrency(value)} /><Legend /><Bar dataKey="Faturamento" fill="#3b82f6" radius={[0, 4, 4, 0]} /></BarChart></ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Crown size={20} /> Top 5 Clientes</CardTitle><CardDescription>Clientes com maior faturamento no período.</CardDescription></CardHeader>
+          <CardContent className="pl-2">
             <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={dadosGraficoPrincipal} onClick={handleBarClick}>
+              <BarChart data={top5Clientes} layout="vertical" margin={{ right: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis yAxisId="left" stroke="#22c55e" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value / 1000}k`} />
+                <XAxis type="number" hide />
+                <YAxis type="category" dataKey="name" yAxisId={0} hide />
+                <YAxis type="category" dataKey="name" orientation="right" yAxisId={1} stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Legend />
-                <Bar yAxisId="left" dataKey="Entradas" fill="#22c55e" radius={[4, 4, 0, 0]} cursor="pointer" />
-                <Bar yAxisId="left" dataKey="Saídas" fill="#ef4444" radius={[4, 4, 0, 0]} cursor="pointer" />
+                <Bar dataKey="Faturamento" fill="#10b981" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Package size={20} /> {tituloGraficoProdutos}</CardTitle>
-            <CardDescription>Faturamento vs. Peso vendido por produto</CardDescription>
-          </CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Users size={20} /> Top 5 Vendedores</CardTitle><CardDescription>Vendedores com maior volume de vendas no período.</CardDescription></CardHeader>
           <CardContent className="pl-2">
             <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={dadosGraficoProdutos} layout="vertical">
+              <BarChart data={top5Vendedores} layout="vertical" margin={{ right: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" hide />
-                <YAxis type="category" dataKey="name" width={80} stroke="#888888" fontSize={12} />
-                <Tooltip formatter={(value: number, name: string) => name === 'Peso' ? `${formatNumber(value)} kg` : formatCurrency(value)} />
-                <Legend />
-                <Bar dataKey="Faturamento" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="Peso" fill="#8884d8" radius={[0, 4, 4, 0]} />
+                <YAxis type="category" dataKey="name" yAxisId={0} hide />
+                <YAxis type="category" dataKey="name" orientation="right" yAxisId={1} stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Bar dataKey="Vendas" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -393,18 +362,8 @@ export default function Dashboard() {
       <Card>
         <CardHeader>
           <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <CardTitle>Histórico de Movimentações</CardTitle>
-              <CardDescription>Filtre e analise as movimentações por período e tipo.</CardDescription>
-            </div>
-            <div className="flex flex-col items-end">
-                <span className="text-sm font-medium text-muted-foreground">
-                    {filtroTipo === 'todos' ? 'Saldo do Período' : `Total de ${filtroTipo}s`}
-                </span>
-                <span className={`text-2xl font-bold ${totalMovimentacoes >= 0 ? 'text-gray-800' : 'text-red-600'}`}>
-                    {formatCurrency(totalMovimentacoes)}
-                </span>
-            </div>
+            <div><CardTitle>Histórico de Movimentações</CardTitle><CardDescription>Filtre e analise as movimentações por período e tipo.</CardDescription></div>
+            <div className="flex flex-col items-end"><span className="text-sm font-medium text-muted-foreground">{filtroTipo === 'todos' ? 'Saldo do Período' : `Total de ${filtroTipo}s`}</span><span className={`text-2xl font-bold ${totalMovimentacoes >= 0 ? 'text-gray-800' : 'text-red-600'}`}>{formatCurrency(totalMovimentacoes)}</span></div>
           </div>
           <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:justify-between sm:items-center pt-4 mt-4 border-t">
             <div className="flex items-center gap-2 flex-wrap">

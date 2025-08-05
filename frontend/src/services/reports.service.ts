@@ -13,9 +13,9 @@ export interface VendasPorPeriodoData {
 // A interface foi atualizada para corresponder à nova resposta da API
 export interface RankingProdutoData {
   produto_nome: string;
-  unidade_medida: string; // 1. Adicionado o campo para a unidade de medida
   faturamento_total: string;
-  quantidade_vendida: string; // 2. Renomeado de 'peso_total' para um nome mais genérico
+  quantidade_vendida: string; // <--- CORREÇÃO DO NOME DO CAMPO
+  unidade_medida: 'kg' | 'un' | null; // <--- ADIÇÃO DO NOVO CAMPO
   transacoes: string;
 }
 // ======================== FIM DA ALTERAÇÃO =========================
